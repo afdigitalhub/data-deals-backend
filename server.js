@@ -204,5 +204,28 @@ app.get('/api/admin/agents', requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const allTime = await pool.query(
+      "SELECT COALESCE(SUM(amount),0) as revenue, COUNT(*) as total_orders FROM orders WHERE status IN ('paid','fulfilled')"
+    );
+    const thisMonth = await pool.query(
+      "SELECT COALESCE(SUM(amount),0) as revenue FROM orders WHERE status IN ('paid','fulfilled') AND created_at >= date_trunc('month', now())"
+    );
+    const pending = await pool.query(
+      "SELECT COUNT(*) as pending_fulfillment FROM orders WHERE status = 'paid'"
+    );
+    res.json({
+      available_balance: allTime.rows[0].revenue,
+      total_orders: allTime.rows[0].total_orders,
+      this_month_revenue: thisMonth.rows[0].revenue,
+      pending_fulfillment: pending.rows[0].pending_fulfillment
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Data Deals API running on port ${PORT}`));
