@@ -5,6 +5,7 @@ import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/BuyWidget';
 import { Alert, Empty, Modal, NetworkBadge } from '../components/ui';
+import { twiGreeting, dailyTwiLine } from '../lib/greeting';
 import { IcArrow, IcBolt, IcGlobe, IcHeadset, IcSearch, IcShield, IcTag, IcWifi } from '../components/icons';
 
 export function HomePage() {
@@ -12,12 +13,25 @@ export function HomePage() {
   const { user, products, loadProducts } = useApp();
   useEffect(() => { loadProducts().catch(() => {}); }, [loadProducts]);
   const featured = (products || []).filter((p) => p.kind === 'data').slice(0, 6);
+  const g = twiGreeting();
+  const line = dailyTwiLine();
   return (
     <SiteLayout onYellow>
       <section className="hero">
         <div className="container hero-inner">
           <div className="hero-copy">
-            <div className="hero-kicker">FAST <i /> SECURE <i /> RELIABLE</div>
+            {user ? (
+              <Link to="/account" className="greet-card">
+                <span className="greet-avatar" aria-hidden="true">{(user.fullName || '?').trim().charAt(0).toUpperCase()}</span>
+                <span className="greet-text">
+                  <span className="greet-hello">{g.twi}, <b>{user.fullName.split(' ')[0]}</b> 👋</span>
+                  <span className="greet-sub"><b>{line.twi}</b> {line.en}</span>
+                </span>
+                <span className="greet-go">Dashboard <IcArrow width={16} height={16} /></span>
+              </Link>
+            ) : (
+              <div className="hero-kicker hero-kicker-split"><span className="kick-hi">{g.twi}! Akwaaba 👋</span><span className="kick-rest">FAST <i /> SECURE <i /> RELIABLE</span></div>
+            )}
             <h1>Stay Connected.<span className="accent">Always.</span></h1>
             <p className="lead">Buy airtime and data bundles for MTN, Telecel and AT. Fast, simple and reliable.</p>
             <div className="features">
@@ -29,7 +43,7 @@ export function HomePage() {
             <div className="row">
               <a href="#buy" className="btn btn-dark btn-lg" onClick={(e) => { e.preventDefault(); document.getElementById('buy')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>Buy Now <IcArrow width={18} height={18} /></a>
               {!user && <Link to="/register" className="btn btn-outline btn-lg">Create Account</Link>}
-              {user && <Link to="/account/orders" className="btn btn-outline btn-lg">My orders</Link>}
+              {user && <Link to="/account" className="btn btn-outline btn-lg">My dashboard</Link>}
             </div>
           </div>
           <img className="hero-lady" src="/images/hero-lady.webp" alt="" width="372" height="540" decoding="async" />

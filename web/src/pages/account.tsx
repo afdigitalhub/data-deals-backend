@@ -5,6 +5,7 @@ import { NETWORK_META, dataSize, dateOnly, dateTime, ghs, timeAgo } from '../lib
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { TrackForm } from './track';
+import { dailyTwiLine, twiGreeting } from '../lib/greeting';
 import { Alert, CopyButton, Empty, Field, Input, Loading, NetworkBadge, Select, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
 import { IcArrow, IcBolt, IcBookmark, IcBox, IcCard, IcChart, IcChat, IcCheckCircle, IcClock, IcHeadset, IcLife, IcList, IcPhone, IcPlus, IcSearch, IcShield, IcTag, IcTrash, IcTruck, IcWifi } from '../components/icons';
 
@@ -57,20 +58,6 @@ function OrderList({ orders }: { orders: OrderRow[] }) {
   );
 }
 
-/** Twi greeting by time of day (Ghana time), with an English line for everyone. */
-export function twiGreeting(d = new Date()) {
-  const h = d.getHours();
-  if (h >= 4 && h < 12) return { twi: 'Maakye', en: 'Good morning' };
-  if (h >= 12 && h < 16) return { twi: 'Maaha', en: 'Good afternoon' };
-  return { twi: 'Maadwo', en: 'Good evening' };
-}
-const TWI_LINES = [
-  { twi: 'Akwaaba bio!', en: 'Welcome back!' },
-  { twi: 'Wo ho te sɛn?', en: 'How are you today?' },
-  { twi: 'Yɛda wo ase!', en: 'Thank you for choosing Data Deals.' },
-  { twi: 'Nyame nhyira wo!', en: 'God bless you!' },
-];
-
 interface Summary { delivered: number; ordersToday: number; deliveredThisMonth: number; spentThisMonthMinor: number; dataThisMonthMb: number; inProgress: number; totalOrders: number; savedNumbers: number }
 
 export function AccountHome() {
@@ -87,7 +74,7 @@ export function AccountHome() {
   const g = twiGreeting();
   const firstName = (user?.fullName || '').split(' ')[0];
   const isNew = sum !== null && sum.totalOrders === 0;
-  const line = isNew ? { twi: 'Akwaaba!', en: 'Welcome to Data Deals. Your first bundle is a few taps away.' } : TWI_LINES[new Date().getDate() % TWI_LINES.length];
+  const line = isNew ? { twi: 'Akwaaba!', en: 'Welcome to Data Deals. Your first bundle is a few taps away.' } : dailyTwiLine();
   const stat = (v: string | number | undefined) => (sum === null ? '—' : v);
   return (
     <AccountShell title="My account">
