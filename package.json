@@ -1,16 +1,29 @@
 {
-  "name": "data-deals-backend",
-  "version": "1.0.0",
-  "description": "Data Deals backend API",
-  "main": "server.js",
+  "name": "data-deals",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Data Deals — airtime and data bundle platform for Ghana (API, website and admin dashboard)",
+  "type": "module",
+  "engines": { "node": ">=20.11" },
   "scripts": {
-    "start": "node server.js"
+    "postinstall": "node build.mjs",
+    "build": "node build.mjs",
+    "start": "node dist/server/index.js",
+    "test": "node build.mjs --server-only && node --test --test-concurrency=1 tests/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "pg": "^8.12.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "node-fetch": "^2.7.0"
+    "esbuild": "^0.27.7",
+    "pg": "^8.16.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.3"
   }
 }
