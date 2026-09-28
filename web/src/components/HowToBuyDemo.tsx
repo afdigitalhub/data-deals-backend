@@ -144,3 +144,30 @@ export function Ticker() {
     </div>
   );
 }
+
+const WORDS = ['MTN data', 'Telecel data', 'AT data', 'airtime'];
+
+/** Phone-size hero stage: the Data Deals lady with rotating text and a moving strip. */
+export function HeroStage() {
+  const [i, setI] = useState(0);
+  const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  useEffect(() => {
+    if (reduced) return;
+    const t = setInterval(() => setI((n) => (n + 1) % WORDS.length), 2200);
+    return () => clearInterval(t);
+  }, [reduced]);
+  const strip = ['MTN', 'Telecel', 'AT', 'Pay with MoMo', 'Delivered fast', 'Akwaaba 👋'].map((t, k) => <span key={k}>{t}<i>⚡</i></span>);
+  return (
+    <div className="stage">
+      <div className="stage-glow" aria-hidden="true" />
+      <img className="stage-lady" src="/images/hero-lady.webp" alt="Smiling customer buying data on her phone" width="372" height="540" decoding="async" fetchPriority="high" />
+      <div className="stage-copy">
+        <span className="stage-pill">⚡ Instant top-up</span>
+        <div className="stage-line">Buy</div>
+        <div className="stage-word" aria-live="polite"><span key={i}>{WORDS[i]}</span></div>
+        <div className="stage-sub">for yourself or anyone, in seconds</div>
+      </div>
+      <div className="stage-strip" aria-hidden="true"><div className="ticker-track">{strip}{strip}</div></div>
+    </div>
+  );
+}

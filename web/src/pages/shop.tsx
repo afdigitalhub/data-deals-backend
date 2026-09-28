@@ -6,7 +6,7 @@ import { SiteLayout } from '../components/layout';
 import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/BuyWidget';
 import { Alert, Empty, Modal, NetworkBadge } from '../components/ui';
 import { twiGreeting, dailyTwiLine } from '../lib/greeting';
-import { HowToBuyDemo, Ticker } from '../components/HowToBuyDemo';
+import { HeroStage, HowToBuyDemo, Ticker } from '../components/HowToBuyDemo';
 import { IcArrow, IcBolt, IcGlobe, IcHeadset, IcSearch, IcShield, IcTag, IcWifi } from '../components/icons';
 
 export function HomePage() {
@@ -35,6 +35,7 @@ export function HomePage() {
             )}
             <h1>Stay Connected.<span className="accent">Always.</span></h1>
             <p className="lead">Buy airtime and data bundles for MTN, Telecel and AT. Fast, simple and reliable.</p>
+            <HeroStage />
             <div className="features">
               <div className="feature"><div className="ic"><IcBolt /></div>Quick<br />checkout</div>
               <div className="feature"><div className="ic"><IcShield /></div>Secure<br />payments</div>
