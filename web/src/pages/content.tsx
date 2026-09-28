@@ -176,7 +176,19 @@ export function AboutPage() {
   return (
     <Legal title="About Data Deals">
       <p>Data Deals is a Ghanaian online platform for buying mobile airtime and data bundles for MTN, Telecel and AT. We focus on clear prices, secure payments and honest order tracking — you can see exactly what is happening with every purchase.</p>
-      {config?.business.showFounders && <p>Data Deals was co-founded by Adonle Fameye and Ben K.</p>}
+      {config?.business.showFounders && !!config.business.founders?.length && (
+        <>
+          <h2>Leadership</h2>
+          <div className="founders">
+            {config.business.founders.map((f) => (
+              <div key={f.name} className="founder">
+                <span className="founder-av" aria-hidden="true">{f.name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
+                <div><b>{f.name}</b><div className="small muted">{f.title}, Data Deals</div></div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <h2>How we work</h2>
       <ul>
         <li>Payments are processed by Paystack. We verify every payment directly with Paystack before delivering.</li>

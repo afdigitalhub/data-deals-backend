@@ -11,7 +11,7 @@ import { paymentProvider } from '../payments/provider.js';
 import { audit } from '../services/audit.js';
 import { emailConfigured, sendEmail } from '../services/notify.js';
 import { confirmPayment, createOrder, quote, retryPayment, STATUS_LABEL, type OrderStatus } from '../services/orders.js';
-import { getSetting, getSettings } from '../services/settings.js';
+import { getSetting, getSettings, foundersOf } from '../services/settings.js';
 import { config } from '../config.js';
 import { tx } from '../db/pool.js';
 
@@ -75,7 +75,7 @@ export function registerPublicRoutes(r: Router) {
     const networks = await q('SELECT code, name, prefixes FROM networks WHERE is_active ORDER BY sort_order');
     const mode = paymentsMode();
     ctx.json(200, {
-      business: { name: s.business.name, tagline: s.business.tagline, supportEmail: s.business.support_email, supportPhone: s.business.support_phone, whatsappNumber: s.business.whatsapp_number, address: s.business.address, showFounders: s.business.show_founders },
+      business: { name: s.business.name, tagline: s.business.tagline, supportEmail: s.business.support_email, supportPhone: s.business.support_phone, whatsappNumber: s.business.whatsapp_number, address: s.business.address, showFounders: s.business.show_founders, founders: s.business.show_founders ? foundersOf(s.business) : [] },
       maintenance: s.maintenance,
       networks,
       payments: { enabled: mode !== 'not_configured', testMode: mode !== 'live' },

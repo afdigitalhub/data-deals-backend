@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import type { Ctx } from './http/core.js';
 import { securityHeaders } from './http/security.js';
-import { getSetting } from './services/settings.js';
+import { foundersOf, getSetting } from './services/settings.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = [join(here, '..', 'web'), join(here, '..', 'dist', 'web')].find((d) => existsSync(join(d, 'index.html'))) || join(here, '..', 'web');
@@ -58,6 +58,7 @@ async function renderIndex(ctx: Ctx, path: string) {
   const robots = meta?.index ? 'index,follow' : 'noindex,nofollow';
   const business = await getSetting('business').catch(() => null);
   const org: Record<string, unknown> = { '@context': 'https://schema.org', '@type': 'Organization', name: business?.name || 'Data Deals', url: config.publicBaseUrl, logo: `${config.publicBaseUrl}/icons/icon-512.png` };
+  if (business?.show_founders) org.founder = foundersOf(business).map((f) => ({ '@type': 'Person', name: f.name, jobTitle: f.title }));
   if (business?.support_email || business?.support_phone) org.contactPoint = { '@type': 'ContactPoint', contactType: 'customer support', areaServed: 'GH', ...(business.support_email ? { email: business.support_email } : {}), ...(business.support_phone ? { telephone: business.support_phone } : {}) };
   const head = [
     `<title>${esc(title)}</title>`,
@@ -68,7 +69,7 @@ async function renderIndex(ctx: Ctx, path: string) {
     `<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">`,
     `<meta property="og:url" content="${esc(canonical)}"><meta property="og:image" content="${config.publicBaseUrl}/icons/og.png">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    path === '/' ? `<script type="application/ld+json">${JSON.stringify(org).replace(/</g, '\\u003c')}</script>` : '',
+    path === '/' || path === '/about' ? `<script type="application/ld+json">${JSON.stringify(org).replace(/</g, '\\u003c')}</script>` : '',
   ].join('\n    ');
   const html = tpl.replace('<!--HEAD-->', head);
   securityHeaders(ctx.res, { html: true });

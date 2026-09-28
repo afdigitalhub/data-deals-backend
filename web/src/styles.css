@@ -526,3 +526,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
   .skeleton { background: linear-gradient(90deg, #1B1D22, #23262B, #1B1D22); background-size: 200% 100%; }
   img.hero-lady { filter: none; }
 }
+.founders { display: grid; gap: 12px; margin: 8px 0 20px; }
+@media (min-width: 640px) { .founders { grid-template-columns: 1fr 1fr; } }
+.founder { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+.founder-av { flex-shrink: 0; width: 48px; height: 48px; border-radius: 14px; background: var(--night); color: var(--yellow); font-weight: 800; display: flex; align-items: center; justify-content: center; }

@@ -12,6 +12,7 @@ export const settingSchemas = {
     whatsapp_number: optStr(30).refine((v) => !v || /^\+?\d{9,15}$/.test(v.replace(/\s/g, '')), 'Use digits only, e.g. 233241234567'),
     address: optStr(200),
     show_founders: z.boolean(),
+    founders: z.array(z.object({ name: z.string().trim().min(2).max(60), title: z.string().trim().min(2).max(60) })).max(4).default([]),
   }),
   limits: z.object({
     max_order_minor: z.number().int().min(100).max(10_000_000),
@@ -56,3 +57,6 @@ export async function putSetting<K extends SettingKey>(key: K, value: Settings[K
 }
 
 export function clearSettingsCache() { cache = null; }
+
+export const DEFAULT_FOUNDERS = [{ name: 'Adonle Fameye', title: 'Co-founder & CEO' }, { name: 'Ben K', title: 'Co-founder & CEO' }];
+export const foundersOf = (b: any): Array<{ name: string; title: string }> => (Array.isArray(b?.founders) && b.founders.length ? b.founders : DEFAULT_FOUNDERS);

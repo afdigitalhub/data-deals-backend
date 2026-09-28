@@ -141,7 +141,17 @@ export function SettingsPage() {
             <Field label="WhatsApp business number" hint="International format, digits only, e.g. 233241234567"><Input value={v.whatsapp_number || ''} onChange={(e) => set({ ...v, whatsapp_number: e.target.value })} /></Field>
             <Field label="Address (optional)"><Input value={v.address || ''} onChange={(e) => set({ ...v, address: e.target.value })} /></Field>
           </div>
-          <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={v.show_founders} onChange={(e) => set({ ...v, show_founders: e.target.checked })} /><span>Show "co-founded by Adonle Fameye and Ben K" on the About page (owners only)</span></label>
+          <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={v.show_founders} onChange={(e) => set({ ...v, show_founders: e.target.checked })} /><span>Show the founders and their titles on the About page and to Google (owners only)</span></label>
+          {v.show_founders && (
+            <div className="grid-2" style={{ marginBottom: 8 }}>
+              {(v.founders?.length ? v.founders : [{ name: 'Adonle Fameye', title: 'Co-founder & CEO' }, { name: 'Ben K', title: 'Co-founder & CEO' }]).map((f: any, i: number, arr: any[]) => (
+                <div key={i} className="stack" style={{ gap: 6 }}>
+                  <Field label={`Founder ${i + 1} name`}><Input value={f.name} onChange={(e) => { const n = arr.map((x: any) => ({ ...x })); n[i].name = e.target.value; set({ ...v, founders: n }); }} /></Field>
+                  <Field label="Title"><Input value={f.title} onChange={(e) => { const n = arr.map((x: any) => ({ ...x })); n[i].title = e.target.value; set({ ...v, founders: n }); }} /></Field>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )} />
       <SettingForm k="maintenance" title="Maintenance mode" value={s.maintenance} canEdit={canEdit} onSaved={reload} render={(v, set) => (

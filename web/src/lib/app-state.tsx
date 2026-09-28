@@ -4,7 +4,7 @@ import type { Network } from './format';
 
 export interface User { id: number; email: string; fullName: string; phone: string | null; role: 'customer' | 'support' | 'admin' | 'owner'; permissions: string[] }
 export interface PublicConfig {
-  business: { name: string; tagline: string; supportEmail: string | null; supportPhone: string | null; whatsappNumber: string | null; address: string | null; showFounders: boolean };
+  business: { name: string; tagline: string; supportEmail: string | null; supportPhone: string | null; whatsappNumber: string | null; address: string | null; showFounders: boolean; founders?: Array<{ name: string; title: string }> };
   maintenance: { enabled: boolean; message: string };
   networks: Network[];
   payments: { enabled: boolean; testMode: boolean };
