@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, type Product } from '../lib/app-state';
-import { CATEGORY_LABEL, NETWORK_META, dataSize, ghs, guessNetwork, normalizePhone } from '../lib/format';
+import { validityText, CATEGORY_LABEL, NETWORK_META, dataSize, ghs, guessNetwork, normalizePhone } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/BuyWidget';
@@ -108,7 +108,7 @@ export function BundleCard({ p, onBuy }: { p: Product; onBuy?: () => void }) {
       <div className="globe"><IcGlobe width={22} height={22} /></div>
       <div style={{ minWidth: 0 }}>
         <div className="size">{p.dataMb ? dataSize(p.dataMb) : p.name}</div>
-        <div className="val">{p.validity ? `Valid for ${p.validity}` : CATEGORY_LABEL[p.category]} · <NetworkName code={p.network} /></div>
+        <div className="val">{p.validity ? validityText(p.validity) : CATEGORY_LABEL[p.category]} · <NetworkName code={p.network} /></div>
       </div>
       <div className="right">
         <div className="price">{ghs((p.priceMinor || 0) + p.feeMinor)}</div>

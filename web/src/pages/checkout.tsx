@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { get, post, safeStorage } from '../lib/api';
+import { ApiError, get, post, safeStorage } from '../lib/api';
 import { rememberOrder, useApp } from '../lib/app-state';
-import { NETWORK_META, dataSize, dateTime, ghs, normalizePhone, randomKey } from '../lib/format';
+import { validityText, NETWORK_META, dataSize, dateTime, ghs, normalizePhone, randomKey } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { Alert, Empty, Field, Input, Loading, NetworkBadge, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
@@ -43,6 +43,12 @@ export function CheckoutPage() {
   const pay = async () => {
     if (submitted.current) return;
     setError(null);
+    if (userLoaded && !user && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError(new ApiError(400, 'Enter your email address so we can send your receipt, then tap Pay again.', 'validation', { email: 'Enter a valid email, e.g. kofi@gmail.com' }));
+      const el = document.getElementById('co-email');
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); (el as HTMLInputElement).focus({ preventScroll: true }); }
+      return;
+    }
     submitted.current = true; setBusy(true);
     try {
       const r = await post<{ reference: string; accessToken: string; authorizationUrl: string | null; status: string }>('/api/checkout/orders', {
@@ -71,7 +77,7 @@ export function CheckoutPage() {
               <NetworkBadge code={network} size="lg" />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{quote.kind === 'data' ? `${product?.dataMb ? dataSize(product.dataMb) : quote.name} Data Bundle` : `${ghs(quote.faceValueMinor)} Airtime`}</div>
-                <div className="muted small">{net?.name}{quote.kind === 'data' && product?.validity ? ` · Valid for ${product.validity}` : ''}</div>
+                <div className="muted small">{net?.name}{quote.kind === 'data' && product?.validity ? ` · ${validityText(product.validity)}` : ''}</div>
                 <div style={{ fontWeight: 800, marginTop: 2 }}>{ghs(quote.priceMinor)}</div>
               </div>
             </div>
@@ -81,6 +87,14 @@ export function CheckoutPage() {
               <div style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: 6 }} className="row"><IcPhone width={18} height={18} />{phone}</div>
               <div className="tiny muted" style={{ marginTop: 4 }}>Please double-check. Top-ups sent to a wrong number cannot be reversed.</div>
             </div>
+
+            {userLoaded && !user && (
+              <div className="card">
+                <Field label="Email for your receipt" error={fieldErr(error, 'email')} hint={<>Already have an account? <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} className="link">Log in</Link></>}>
+                  <Input id="co-email" type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                </Field>
+              </div>
+            )}
 
             <div className="card">
               <div style={{ fontWeight: 800, marginBottom: 10 }}>Payment method</div>
@@ -99,13 +113,6 @@ export function CheckoutPage() {
               <p className="tiny muted" style={{ margin: '10px 0 0' }}>You'll confirm the payment on Paystack's secure page. Data Deals never sees your Mobile Money PIN or card details.</p>
             </div>
 
-            {userLoaded && !user && (
-              <div className="card">
-                <Field label="Email for your receipt" error={fieldErr(error, 'email')} hint={<>Already have an account? <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} className="link">Log in</Link></>}>
-                  <Input type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-                </Field>
-              </div>
-            )}
 
             <div className="card">
               <div className="price-line"><span>{quote.kind === 'airtime' ? 'Airtime value' : 'Bundle price'}</span><span>{ghs(quote.priceMinor)}</span></div>
@@ -118,7 +125,7 @@ export function CheckoutPage() {
             {config?.payments.enabled && config.payments.testMode && <Alert kind="info">Test mode: no real money will be taken and nothing will be delivered.</Alert>}
             {error ? <Alert>{errMsg(error)}</Alert> : null}
 
-            <button className="btn btn-yellow btn-block btn-lg" onClick={pay} disabled={busy || !config?.payments.enabled || config?.maintenance.enabled || (userLoaded && !user && !email.includes('@'))}>
+            <button className="btn btn-yellow btn-block btn-lg" onClick={pay} disabled={busy || !config?.payments.enabled || config?.maintenance.enabled}>
               {busy ? <><Spinner /> Opening secure payment…</> : `Pay ${ghs(quote.totalMinor)}`}
             </button>
             <div className="row tiny muted" style={{ justifyContent: 'center' }}><IcLock width={14} height={14} />Secured by Paystack</div>

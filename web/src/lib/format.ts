@@ -56,3 +56,6 @@ export const NETWORK_META: Record<string, { name: string; color: string; ink: st
 };
 
 export const CATEGORY_LABEL: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', non_expiry: 'Non-expiry', other: 'Other', airtime: 'Airtime' };
+
+/** '7 days' -> 'Valid for 7 days'; 'No expiry' stays as is. */
+export const validityText = (v: string) => (/^\d/.test(v.trim()) ? `Valid for ${v}` : v);
