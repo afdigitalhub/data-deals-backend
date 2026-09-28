@@ -41,6 +41,13 @@ export const config = {
     refPrefix: env.DATAMART_REF_PREFIX || '', // optional "reference rule" prefix if enabled in DataMart
     baseUrl: (env.DATAMART_API_BASE_URL || 'https://api.datamartgh.shop/api/developer').replace(/\/+$/, ''),
   },
+  // Web push (phone notifications). Keys are generated once and stored only in Render's environment.
+  push: {
+    publicKey: env.VAPID_PUBLIC_KEY || '',
+    privateKey: env.VAPID_PRIVATE_KEY || '',
+    subject: env.VAPID_SUBJECT || '',
+    allowAnyHost: isTest && bool(env.PUSH_ALLOW_ANY_HOST),
+  },
   email: {
     resendApiKey: env.RESEND_API_KEY || '',
     from: env.EMAIL_FROM || '',

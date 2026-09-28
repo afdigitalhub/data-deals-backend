@@ -7,6 +7,7 @@ import { registerPublicRoutes } from './routes/public.js';
 import { registerAccountRoutes } from './routes/account.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerWebhookRoutes } from './routes/webhooks.js';
+import { registerPushRoutes } from './routes/push.js';
 import { serveWeb } from './web.js';
 import { fakeLedger } from './payments/provider.js';
 import { log } from './lib/log.js';
@@ -17,6 +18,7 @@ export function buildRouter() {
   registerAccountRoutes(r);
   registerAdminRoutes(r);
   registerWebhookRoutes(r);
+  registerPushRoutes(r);
   return r;
 }
 

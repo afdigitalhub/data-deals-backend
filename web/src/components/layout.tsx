@@ -1,3 +1,4 @@
+import { InstallBanner } from './InstallBanner';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, navigate, useLocation } from '../lib/router';
 import { useApp } from '../lib/app-state';
@@ -131,6 +132,7 @@ export function SiteLayout({ children, onYellow = false }: { children: ReactNode
       <Header onYellow={onYellow} />
       <main id="main">{children}</main>
       <Footer />
+      <InstallBanner />
       <BottomNav />
     </div>
   );

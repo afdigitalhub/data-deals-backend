@@ -1,3 +1,4 @@
+import { NotifyCard } from '../components/NotifyCard';
 import { useState, type FormEvent } from 'react';
 import { post } from '../lib/api';
 import { rememberOrder, rememberedOrders } from '../lib/app-state';
@@ -57,6 +58,20 @@ export function TrackPage() {
           </div>
         )}
         <p className="small muted" style={{ marginTop: 16 }}>Can't find your order number? <Link to="/support#contact" className="link">Contact support</Link> with the phone number and the time you paid. Have an account? <Link to="/login?next=/account/orders" className="link">Log in</Link> to see all your orders.</p>
+      </div>
+    </SiteLayout>
+  );
+}
+
+export function NotificationsPage() {
+  usePageTitle('Notification settings');
+  return (
+    <SiteLayout>
+      <div className="container" style={{ maxWidth: 620, padding: '24px 16px 48px' }}>
+        <h1 style={{ fontSize: '1.8rem' }}>Notification settings</h1>
+        <p className="muted">Choose what Data Deals sends to this phone. Changes apply to this device only.</p>
+        <NotifyCard variant="settings" />
+        <p className="tiny muted">If you don't see any options here, notifications aren't turned on for this browser.</p>
       </div>
     </SiteLayout>
   );

@@ -23,6 +23,7 @@ const PAGES: Record<string, PageMeta> = {
   '/data-bundles': { title: 'Data Bundles — MTN, Telecel, AT | Data Deals', description: 'Browse daily, weekly and monthly data bundles for MTN, Telecel and AT. Clear prices, no surprises.', index: true },
   '/rates': { title: 'Rates & Prices | Data Deals', description: 'Current Data Deals prices for data bundles and airtime on MTN, Telecel and AT.', index: true },
   '/how-it-works': { title: 'How It Works | Data Deals', description: 'Choose a network, enter the number, pick a bundle and pay. Here is exactly what happens after you pay.', index: true },
+  '/notifications': { title: 'Notification settings | Data Deals', description: 'Manage Data Deals notifications on this device.', index: false },
   '/track': { title: 'Track Your Order | Data Deals', description: 'Enter your order number and phone number to see if your airtime or data bundle has been delivered.', index: true },
   '/support': { title: 'Support & FAQs | Data Deals', description: 'Answers to common questions and a direct way to reach the Data Deals team about any order.', index: true },
   '/about': { title: 'About Data Deals', description: 'Data Deals is a Ghanaian platform for buying airtime and data bundles online.', index: true },

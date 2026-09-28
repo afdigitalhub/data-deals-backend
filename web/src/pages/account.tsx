@@ -5,6 +5,7 @@ import { NETWORK_META, dataSize, dateOnly, dateTime, ghs, timeAgo } from '../lib
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { TrackForm } from './track';
+import { NotifyCard } from '../components/NotifyCard';
 import { dailyTwiLine, twiGreeting } from '../lib/greeting';
 import { Alert, CopyButton, Empty, Field, Input, Loading, NetworkBadge, Select, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
 import { IcArrow, IcBolt, IcBookmark, IcBox, IcCard, IcChart, IcChat, IcCheckCircle, IcClock, IcHeadset, IcLife, IcList, IcPhone, IcPlus, IcSearch, IcShield, IcTag, IcTrash, IcTruck, IcWifi } from '../components/icons';
@@ -95,6 +96,8 @@ export function AccountHome() {
           <div className="dash-stat"><div className="dash-stat-ic"><IcCard /></div><div><div className="dash-stat-v">{stat(sum ? ghs(sum.spentThisMonthMinor) : undefined)}</div><div className="dash-stat-l">Spent this month</div></div></div>
         </div>
       </div>
+
+      <NotifyCard variant="dashboard" />
 
       {sum && sum.inProgress > 0 && (
         <Link to="/account/orders" className="dash-banner"><IcClock /> <span><b>{sum.inProgress} order{sum.inProgress > 1 ? 's' : ''} in progress.</b> Tap to follow {sum.inProgress > 1 ? 'them' : 'it'} live.</span> <IcArrow /></Link>
@@ -263,9 +266,13 @@ export function AccountProfile() {
   const [sessions, setSessions] = useState<any[]>([]);
   const loadSessions = () => get('/api/account/sessions').then((r) => setSessions(r.sessions)).catch(() => {});
   useEffect(() => { loadSessions(); }, []);
+  // Fill the form once the account has loaded (e.g. when this page is opened directly), without overwriting edits.
+  useEffect(() => { if (user) setF((cur) => (cur.full_name || cur.email || cur.phone ? cur : { ...cur, full_name: user.fullName || '', email: user.email || '', phone: user.phone || '' })); }, [user]);
   const emailChanged = f.email.trim().toLowerCase() !== (user?.email || '');
   return (
     <AccountShell title="Profile & security">
+      <h2>Notifications</h2>
+      <NotifyCard variant="settings" />
       <h2>Profile</h2>
       <form className="card" style={{ marginBottom: 16 }} noValidate onSubmit={async (e) => {
         e.preventDefault(); setMsg(null); setErr(null);

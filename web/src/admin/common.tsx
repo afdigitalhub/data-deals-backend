@@ -57,11 +57,11 @@ export function AreaChart({ points, height = 200 }: { points: { label: string; v
   return (
     <div className="chart" ref={ref} style={{ position: 'relative' }} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sales over time">
-        {ticks.map((t) => <g key={t}><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="#EEECE6" /><text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#8A8E96">{t >= 100000 ? `${(t / 100000).toFixed(t % 100000 ? 1 : 0)}k` : (t / 100).toFixed(t % 100 ? (t % 10 ? 2 : 1) : 0)}</text></g>)}
+        {ticks.map((t) => <g key={t}><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} style={{ stroke: 'var(--line)' }} /><text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#8A8E96">{t >= 100000 ? `${(t / 100000).toFixed(t % 100000 ? 1 : 0)}k` : (t / 100).toFixed(t % 100 ? (t % 10 ? 2 : 1) : 0)}</text></g>)}
         <path d={area} fill="#FFD400" fillOpacity=".28" />
         <path d={line} fill="none" stroke="#E0B000" strokeWidth="2.5" strokeLinejoin="round" />
         {points.map((p, i) => i % every === 0 || i === points.length - 1 ? <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize="11" fill="#8A8E96">{p.label.slice(5).replace('-', '/')}</text> : null)}
-        {hover !== null && <><line x1={x(hover)} x2={x(hover)} y1={pad.t} y2={H - pad.b} stroke="#101114" strokeOpacity=".25" /><circle cx={x(hover)} cy={y(points[hover].value)} r="5" fill="#101114" stroke="#FFD400" strokeWidth="2" /></>}
+        {hover !== null && <><line x1={x(hover)} x2={x(hover)} y1={pad.t} y2={H - pad.b} style={{ stroke: 'var(--ink)' }} strokeOpacity=".25" /><circle cx={x(hover)} cy={y(points[hover].value)} r="5" fill="#101114" stroke="#FFD400" strokeWidth="2" /></>}
       </svg>
       {hover !== null && <div className="chart-tip" style={{ left: `${(x(hover) / W) * 100}%`, top: `${(y(points[hover].value) / H) * 100}%` }}>{points[hover].label}: <b>{ghs(points[hover].value)}</b></div>}
     </div>

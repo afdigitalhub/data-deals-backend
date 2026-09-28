@@ -2,6 +2,7 @@ import { config } from '../config.js';
 import { q, type Queryable } from '../db/pool.js';
 import { log } from '../lib/log.js';
 import { getSetting } from './settings.js';
+import { queueOrderPush } from './push.js';
 
 export function emailConfigured() {
   return !!(config.email.resendApiKey && config.email.from);
@@ -30,6 +31,11 @@ export async function notify(opts: { userId: number | null; email?: string | nul
   if (opts.userId) {
     await q('INSERT INTO notifications (user_id, order_id, type, title, body, channel, status) VALUES ($1,$2,$3,$4,$5,$6,$7)',
       [opts.userId, opts.orderId ?? null, opts.type, opts.title, opts.body, 'in_app', 'sent'], db);
+  }
+  // Phone notification to the customer's devices (and guests watching this order), sent after the transaction commits.
+  if (opts.orderId && opts.type.startsWith('order_')) {
+    const emoji = opts.type === 'order_delivered' ? '✅ ' : opts.type === 'order_failed' ? '⚠️ ' : opts.type === 'order_refunded' ? '💸 ' : '';
+    await queueOrderPush(opts.orderId, { title: emoji + opts.title, body: opts.body, tag: opts.type }, db);
   }
   if (opts.email) {
     const n = await getSetting('notifications');

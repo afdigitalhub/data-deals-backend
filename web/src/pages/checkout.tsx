@@ -4,6 +4,7 @@ import { rememberOrder, useApp } from '../lib/app-state';
 import { validityText, NETWORK_META, dataSize, dateTime, ghs, normalizePhone, randomKey } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
+import { NotifyCard } from '../components/NotifyCard';
 import { Alert, Empty, Field, Input, Loading, NetworkBadge, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
 import { IcAlert, IcBack, IcCard, IcCheck, IcClock, IcLock, IcPhone, IcRefund } from '../components/icons';
 
@@ -103,10 +104,10 @@ export function CheckoutPage() {
                   ['mobile_money', 'Mobile Money', 'MTN MoMo, Telecel Cash or AT Money', <IcPhone key="m" />],
                   ['card', 'Card', 'Visa or Mastercard', <IcCard key="c" />],
                 ] as const).map(([val, title, sub, icon]) => (
-                  <label key={val} className="row" style={{ border: `1.5px solid ${method === val ? 'var(--ink)' : 'var(--line)'}`, borderRadius: 14, padding: '12px 14px', cursor: 'pointer', flexWrap: 'nowrap', background: method === val ? 'var(--yellow-soft)' : '#fff' }}>
-                    <span style={{ width: 38, height: 38, borderRadius: 10, background: '#fff', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</span>
+                  <label key={val} className="row" style={{ border: `1.5px solid ${method === val ? 'var(--ink)' : 'var(--line)'}`, borderRadius: 14, padding: '12px 14px', cursor: 'pointer', flexWrap: 'nowrap', background: method === val ? 'var(--yellow-soft)' : 'var(--surface)' }}>
+                    <span style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</span>
                     <span style={{ flex: 1 }}><b>{title}</b><br /><span className="small muted">{sub}</span></span>
-                    <input type="radio" name="method" checked={method === val} onChange={() => setMethod(val)} style={{ width: 20, height: 20, accentColor: '#101114' }} />
+                    <input type="radio" name="method" checked={method === val} onChange={() => setMethod(val)} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
                   </label>
                 ))}
               </div>
@@ -205,6 +206,8 @@ export function OrderPage({ reference }: { reference: string }) {
           )}
         </div>
         {error && <div style={{ marginTop: 12 }}><Alert kind="warn">{error}</Alert></div>}
+        {['paid', 'queued', 'processing', 'needs_review'].includes(s) && <div style={{ marginTop: 16 }}><NotifyCard variant="order" orderReference={order.reference} orderToken={token || undefined} /></div>}
+        {s === 'successful' && <div style={{ marginTop: 16 }}><NotifyCard variant="dashboard" /></div>}
 
         <div className="card receipt" style={{ marginTop: 16 }} id="receipt">
           <div className="row between" style={{ marginBottom: 12 }}><h2 style={{ fontSize: '1.15rem', margin: 0 }}>Receipt</h2><button className="btn btn-light btn-sm" onClick={() => window.print()}>Print / save</button></div>

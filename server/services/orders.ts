@@ -8,6 +8,7 @@ import { paymentProvider, PaymentUnavailable } from '../payments/provider.js';
 import { adapterFor, isAdapterReady, type DeliveryRequest, type DeliveryResult } from '../suppliers/adapters.js';
 import { enqueue, registerJob } from './jobs.js';
 import { alertAdmins, notify } from './notify.js';
+import { scheduleDailyPush } from './push.js';
 import { getSetting } from './settings.js';
 import { audit } from './audit.js';
 
@@ -375,6 +376,8 @@ export async function periodicTasks() {
   for (const a of stuck) await applyDeliveryResult(a.id, { outcome: 'unknown', message: 'No response recorded (server restarted during the request)' });
   // 4) Refunds being processed by Paystack: check their status.
   await reconcileRefunds();
+  // 5) Daily phone notification run (once per day after the configured hour).
+  await scheduleDailyPush().catch((e) => log.warn('daily push schedule failed', { err: e }));
 }
 
 export async function reconcileRefunds() {

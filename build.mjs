@@ -9,7 +9,7 @@ const t0 = Date.now();
 
 rmSync('dist/server', { recursive: true, force: true });
 await build({
-  entryPoints: ['server/index.ts', 'server/app.ts', 'server/db/pool.ts', 'server/db/migrate.ts', 'server/services/jobs.ts', 'server/services/orders.ts', 'server/payments/provider.ts', 'server/suppliers/adapters.ts', 'server/http/security.ts', 'server/services/settings.ts'],
+  entryPoints: ['server/index.ts', 'server/app.ts', 'server/db/pool.ts', 'server/db/migrate.ts', 'server/services/jobs.ts', 'server/services/orders.ts', 'server/payments/provider.ts', 'server/suppliers/adapters.ts', 'server/http/security.ts', 'server/services/settings.ts', 'server/services/push.ts', 'server/lib/webpush.ts'],
   outdir: 'dist/server', outbase: 'server', bundle: true, splitting: true, platform: 'node', format: 'esm', target: 'node20',
   packages: 'external', sourcemap: true, logLevel: 'warning',
 });

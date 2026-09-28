@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { put } from '../lib/api';
+import { post, put } from '../lib/api';
 import { useApp } from '../lib/app-state';
 import { cedisToMinor, dateTime, ghs, minorToCedis } from '../lib/format';
 import { navigate, usePageTitle } from '../lib/router';
@@ -166,6 +166,20 @@ export function SettingsPage() {
           <Field label="Send admin alerts to (email)" hint="Failed deliveries, reviews and duplicate payments"><Input type="email" value={v.admin_alert_email || ''} onChange={(e) => set({ ...v, admin_alert_email: e.target.value })} /></Field>
         </>
       )} />
+      <PushPanel canEdit={canEdit} />
+      {s.push && <SettingForm k="push" title="Daily phone messages" value={s.push} canEdit={canEdit} onSaved={reload} render={(v: any, set) => (
+        <>
+          <label className="check" style={{ marginBottom: 10 }}><input type="checkbox" checked={v.daily_enabled} onChange={(e) => set({ ...v, daily_enabled: e.target.checked })} /><span><b>Send one message a day</b> to customers who turned on notifications and didn't switch daily deals off</span></label>
+          <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={v.reminders_enabled} onChange={(e) => set({ ...v, reminders_enabled: e.target.checked })} /><span><b>Smart reminders</b>: when a customer's last bundle is probably finishing, send "your data may be running low, buy again in one tap" instead of that day's message</span></label>
+          <div className="grid-2">
+            <Field label="Send time (Ghana time)" hint="Messages go out at this hour when the website is awake">
+              <Select value={String(v.send_hour)} onChange={(e) => set({ ...v, send_hour: Number(e.target.value) })}>{Array.from({ length: 16 }, (_, i) => i + 6).map((h) => <option key={h} value={h}>{h < 12 ? `${h}:00 am` : h === 12 ? '12:00 pm' : `${h - 12}:00 pm`}</option>)}</Select>
+            </Field>
+            <Field label="Custom title (optional)" hint="Leave empty to use the rotating Twi messages"><Input value={v.custom_title || ''} maxLength={60} onChange={(e) => set({ ...v, custom_title: e.target.value || null })} placeholder="e.g. Weekend deal 🎉" /></Field>
+          </div>
+          <Field label="Custom message (optional)" hint="If set, everyone gets this instead of the rotating messages. Keep it short and honest; never promise prices that aren't on the site."><Textarea value={v.custom_message || ''} maxLength={180} onChange={(e) => set({ ...v, custom_message: e.target.value || null })} style={{ minHeight: 64 }} /></Field>
+        </>
+      )} />}
       <SettingForm k="agents" title="Agent programme" value={s.agents} canEdit={canEdit} onSaved={reload} render={(v, set) => (
         <>
           <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={v.enabled} onChange={(e) => set({ ...v, enabled: e.target.checked })} /><span>Agent programme is open</span></label>
@@ -219,4 +233,39 @@ export function AuditPage() {
 function summarize(d: any) {
   if (!d || typeof d !== 'object') return '';
   return Object.entries(d).filter(([k]) => !['created_at', 'updated_at', 'id', 'created_by', 'updated_by'].includes(k)).slice(0, 6).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join(' · ').slice(0, 300);
+}
+
+function PushPanel({ canEdit }: { canEdit: boolean }) {
+  const { data, reload } = useLoad<any>('/api/admin/push');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  if (!data) return null;
+  const st = data.stats; const t = data.today;
+  const act = async (kind: 'test' | 'today') => {
+    setBusy(kind); setMsg(null);
+    try {
+      const r = await post(kind === 'test' ? '/api/admin/push/test' : '/api/admin/push/send-today');
+      setMsg(kind === 'test' ? (r.devices ? `Test sent to ${r.delivered} of ${r.devices} of your devices.` : 'None of your devices has notifications on. Open your dashboard on your phone and tap "Turn on notifications" first.') : `Sent today's message to ${r.sent} device${r.sent === 1 ? '' : 's'}. Devices already messaged today were skipped.`);
+      reload();
+    } catch (e) { setMsg(errMsg(e)); } finally { setBusy(null); }
+  };
+  return (
+    <Panel title="Phone notifications">
+      {!data.configured ? <Alert kind="info">Phone notifications are not switched on for this server yet.</Alert> : (
+        <>
+          <div className="grid-3" style={{ marginBottom: 12 }}>
+            <div className="stat"><div className="stat-v">{st.active}</div><div className="stat-l">Phones with notifications on</div></div>
+            <div className="stat"><div className="stat-v">{st.marketing}</div><div className="stat-l">Accepting daily messages</div></div>
+            <div className="stat"><div className="stat-v">{t.daily + t.reminders}</div><div className="stat-l">Sent today ({t.reminders} smart reminders)</div></div>
+          </div>
+          <p className="tiny muted">Customers turn this on themselves from their dashboard or order page, and can switch daily messages off at any time. Order updates (delivered, failed, refunded) are sent automatically.</p>
+          {msg && <div style={{ margin: '10px 0' }}><Alert kind="info">{msg}</Alert></div>}
+          {canEdit && <div className="row" style={{ gap: 8 }}>
+            <button className="btn btn-light btn-sm" disabled={!!busy} onClick={() => act('test')}>{busy === 'test' ? <Spinner /> : 'Send a test to my phone'}</button>
+            <button className="btn btn-dark btn-sm" disabled={!!busy || !st.marketing} onClick={() => act('today')}>{busy === 'today' ? <Spinner /> : "Send today's message now"}</button>
+          </div>}
+        </>
+      )}
+    </Panel>
+  );
 }

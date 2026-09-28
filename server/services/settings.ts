@@ -21,6 +21,13 @@ export const settingSchemas = {
   maintenance: z.object({ enabled: z.boolean(), message: z.string().trim().max(300) }),
   policies: z.object({ refund_window_days: z.number().int().min(0).max(90) }),
   notifications: z.object({ email_enabled: z.boolean(), sms_enabled: z.boolean(), admin_alert_email: optStr(254) }),
+  push: z.object({
+    daily_enabled: z.boolean(),
+    send_hour: z.number().int().min(6).max(21),
+    reminders_enabled: z.boolean(),
+    custom_title: optStr(60),
+    custom_message: optStr(180),
+  }),
   agents: z.object({ enabled: z.boolean(), default_commission_bps: z.number().int().min(0).max(5000), min_withdrawal_minor: z.number().int().min(100).max(10_000_000) }),
 };
 export type SettingKey = keyof typeof settingSchemas;

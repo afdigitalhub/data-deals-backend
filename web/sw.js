@@ -22,3 +22,29 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(e.request).catch(() => new Response('<!doctype html><meta name=viewport content="width=device-width"><body style="font-family:sans-serif;padding:32px;text-align:center"><h2>You are offline</h2><p>Check your internet connection and try again.</p><button onclick="location.reload()" style="padding:12px 20px;border-radius:10px;border:0;background:#FFD400;font-weight:700">Retry</button></body>', { headers: { 'Content-Type': 'text/html' } })));
   }
 });
+
+// ---------- Phone notifications ----------
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'Data Deals', body: e.data ? e.data.text() : '' }; }
+  const title = d.title || 'Data Deals';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || '',
+    icon: d.icon || '/icons/icon-192.png',
+    badge: d.badge || '/icons/badge-72.png',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    data: { url: d.url || '/' },
+    actions: d.tag === 'daily' || d.tag === 'reminder' ? [{ action: 'open', title: 'Buy now' }, { action: 'settings', title: 'Notification settings' }] : [],
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const target = e.action === 'settings' ? '/notifications' : (e.notification.data && e.notification.data.url) || '/';
+  const url = new URL(target, self.location.origin);
+  if (url.origin !== self.location.origin) return; // only ever open our own site
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if (c.url.startsWith(self.location.origin) && 'focus' in c) { c.navigate(url.href); return c.focus(); } }
+    return self.clients.openWindow(url.href);
+  }));
+});
