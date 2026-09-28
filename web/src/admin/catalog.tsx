@@ -171,7 +171,7 @@ function ProductForm({ initial, suppliers, onClose, onSaved }: { initial: any; s
         <Field label="Automatic supplier" hint={autoSuppliers.length ? 'Only connected suppliers deliver automatically' : 'No automatic supplier connected yet'}>
           <Select value={f.supplier_id} onChange={set('supplier_id')}><option value="">None (manual delivery)</option>{autoSuppliers.map((s) => <option key={s.id} value={s.id}>{s.name}{s.connectionStatus !== 'connected' ? ' — not connected' : ''}</option>)}</Select>
         </Field>
-        <Field label="Supplier product code"><Input value={f.supplier_product_code} onChange={set('supplier_product_code')} disabled={!f.supplier_id} /></Field>
+        <Field label="Supplier product code" hint="DataMart: bundle size in GB, e.g. 5. Leave empty to use this bundle's size."><Input value={f.supplier_product_code} onChange={set('supplier_product_code')} disabled={!f.supplier_id} /></Field>
       </div>
       <label className="check" style={{ marginBottom: 14 }}><input type="checkbox" checked={f.manual} onChange={set('manual')} /><span>Allow manual delivery by admins (used when no automatic supplier can deliver)</span></label>
       <div className="grid-2">

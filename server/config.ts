@@ -34,6 +34,13 @@ export const config = {
     apiKey: env.REMADATA_API_KEY || '',
     baseUrl: env.REMADATA_API_BASE_URL || '',
   },
+  // DataMart GH (https://www.datamartgh.shop/api-doc). Key lives only in Render's environment settings.
+  datamart: {
+    apiKey: env.DATAMART_API_KEY || '',
+    apiSecret: env.DATAMART_API_SECRET || '', // optional "second secret" (X-API-Secret) if enabled in DataMart
+    refPrefix: env.DATAMART_REF_PREFIX || '', // optional "reference rule" prefix if enabled in DataMart
+    baseUrl: (env.DATAMART_API_BASE_URL || 'https://api.datamartgh.shop/api/developer').replace(/\/+$/, ''),
+  },
   email: {
     resendApiKey: env.RESEND_API_KEY || '',
     from: env.EMAIL_FROM || '',

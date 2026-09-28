@@ -239,7 +239,7 @@ export async function confirmPayment(providerRef: string, source: 'webhook' | 'v
 
 // ---------- Fulfilment ----------
 function deliveryRequest(order: any, product: any, requestId: string): DeliveryRequest {
-  return { requestId, kind: order.kind, network: order.network_code, recipient: order.recipient_phone, productCode: product.supplier_product_code, faceValueMinor: order.face_value_minor };
+  return { requestId, kind: order.kind, network: order.network_code, recipient: order.recipient_phone, productCode: product.supplier_product_code, faceValueMinor: order.face_value_minor, dataMb: product.data_mb ?? null };
 }
 
 export async function fulfil(orderId: number, opts: { retry?: boolean } = {}) {
@@ -249,7 +249,10 @@ export async function fulfil(orderId: number, opts: { retry?: boolean } = {}) {
     if (!(order.status === 'paid' || (order.status === 'queued' && opts.retry))) return null;
     const product = (await one('SELECT * FROM products WHERE id = $1', [order.product_id], db))!;
     const supplier = product.supplier_id ? await one('SELECT * FROM suppliers WHERE id = $1', [product.supplier_id], db) : null;
-    const autoReady = !!supplier && supplier.is_enabled && isAdapterReady(supplier.adapter) && (order.kind === 'airtime' || !!product.supplier_product_code);
+    const adapter = supplier ? adapterFor(supplier.adapter) : null;
+    const preview = deliveryRequest(order, product, '');
+    const autoReady = !!supplier && supplier.is_enabled && isAdapterReady(supplier.adapter) &&
+      (adapter?.unsupported ? adapter.unsupported(preview) === null : (order.kind === 'airtime' || !!product.supplier_product_code));
 
     const last = await one(`SELECT * FROM delivery_attempts WHERE order_id = $1 ORDER BY attempt_no DESC LIMIT 1`, [order.id], db);
     if (last && ['sending', 'pending', 'unknown'].includes(last.status)) {
@@ -309,6 +312,7 @@ export async function applyDeliveryResult(attemptId: number, result: DeliveryRes
     }
     if (result.outcome === 'pending') {
       await addEvent(db, order.id, 'delivery_pending', `Supplier accepted the request and is processing it${result.supplierReference ? ` (ref ${result.supplierReference})` : ''}`, actor);
+      if (!adapterFor(attempt.adapter)?.checkStatus) alertAdmins('Delivery waiting for confirmation', `Order ${order.reference}: ${attempt.supplier_name} accepted it but has not confirmed delivery. Check the supplier dashboard, then record the result.`);
       return { check: true, adapter: attempt.adapter };
     }
     // unknown
