@@ -1,3 +1,4 @@
+import { ChatWidget } from './ChatWidget';
 import { InstallBanner } from './InstallBanner';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, navigate, useLocation } from '../lib/router';
@@ -133,6 +134,7 @@ export function SiteLayout({ children, onYellow = false }: { children: ReactNode
       <main id="main">{children}</main>
       <Footer />
       <InstallBanner />
+      <ChatWidget />
       <BottomNav />
     </div>
   );

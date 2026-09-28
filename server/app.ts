@@ -8,6 +8,7 @@ import { registerAccountRoutes } from './routes/account.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerWebhookRoutes } from './routes/webhooks.js';
 import { registerPushRoutes } from './routes/push.js';
+import { registerChatRoutes } from './routes/chat.js';
 import { serveWeb } from './web.js';
 import { fakeLedger } from './payments/provider.js';
 import { log } from './lib/log.js';
@@ -19,6 +20,7 @@ export function buildRouter() {
   registerAdminRoutes(r);
   registerWebhookRoutes(r);
   registerPushRoutes(r);
+  registerChatRoutes(r);
   return r;
 }
 

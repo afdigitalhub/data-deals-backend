@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../lib/app-state';
+import { get } from '../lib/api';
 import { NETWORK_META, dateTime, ghs } from '../lib/format';
 import { Link, match, navigate, useLocation, usePageTitle } from '../lib/router';
 import { Alert, Loading, NetworkBadge, StatusPill } from '../components/ui';
-import { Bolt, IcBox, IcCart, IcChart, IcCheckCircle, IcClock, IcFile, IcHome, IcLife, IcLogout, IcMenu, IcPlug, IcRefund, IcSettings, IcShare, IcUsers, IcAlert } from '../components/icons';
+import { Bolt, IcBox, IcCart, IcChart, IcCheckCircle, IcClock, IcFile, IcHome, IcLife, IcLogout, IcMenu, IcPlug, IcRefund, IcSettings, IcShare, IcUsers, IcAlert, IcChat } from '../components/icons';
 import { AreaChart, Panel, fillDays, isoDay, useLoad } from './common';
 import { OrdersPage, OrderDetailPage } from './orders';
+import { LiveChatPage, TeamChatPage } from './chat';
 import { ProductsPage, SuppliersPage } from './catalog';
 import { CustomersPage, CustomerDetailPage, TicketsPage, TicketDetailPage, TeamPage, AgentsPage } from './people';
 import { PaymentsPage, SettingsPage, AuditPage } from './system';
@@ -21,7 +23,9 @@ const NAV: { to: string; label: string; icon: ReactNode; perm: string; group?: s
   { to: '/admin/payments', label: 'Payments & refunds', icon: <IcRefund />, perm: 'payments.view', group: 'Money' },
   { to: '/admin/reports', label: 'Reports', icon: <IcChart />, perm: 'analytics.view' },
   { to: '/admin/agents', label: 'Agents', icon: <IcShare />, perm: 'agents.manage' },
-  { to: '/admin/support', label: 'Support', icon: <IcLife />, perm: 'support.reply', group: 'Operations' },
+  { to: '/admin/chat', label: 'Live chat', icon: <IcChat />, perm: 'support.reply', group: 'Operations' },
+  { to: '/admin/team-chat', label: 'Team chat', icon: <IcUsers />, perm: 'orders.view' },
+  { to: '/admin/support', label: 'Support tickets', icon: <IcLife />, perm: 'support.reply' },
   { to: '/admin/team', label: 'Team', icon: <IcUsers />, perm: 'team.manage' },
   { to: '/admin/audit', label: 'Audit log', icon: <IcFile />, perm: 'audit.view' },
   { to: '/admin/settings', label: 'Settings', icon: <IcSettings />, perm: 'orders.view' },
@@ -33,6 +37,12 @@ export default function AdminApp() {
   const [open, setOpen] = useState(false);
   const counts = useLoad<any>(user && user.role !== 'customer' ? '/api/admin/overview?from=' + isoDay(new Date(Date.now() - 86400000)) : null, [path]);
   useEffect(() => setOpen(false), [path]);
+  const [unread, setUnread] = useState<{ support: number; team: number }>({ support: 0, team: 0 });
+  useEffect(() => {
+    if (!user || user.role === 'customer') return;
+    const tick = () => { if (document.visibilityState === 'visible') get('/api/admin/chat-unread').then(setUnread).catch(() => {}); };
+    tick(); const t = setInterval(tick, 12000); return () => clearInterval(t);
+  }, [user?.id, path]);
   useEffect(() => { if (userLoaded && !user) navigate(`/login?next=${encodeURIComponent(path)}`, { replace: true }); }, [userLoaded, user, path]);
   if (!userLoaded || !user) return <Loading text="Checking your access…" />;
   if (user.role === 'customer') return <div className="container section"><Alert>This area is for Data Deals administrators only.</Alert><Link to="/" className="btn btn-dark" style={{ marginTop: 12 }}>Back to the website</Link></div>;
@@ -52,6 +62,9 @@ export default function AdminApp() {
   else if (path === '/admin/reports') page = <Dashboard reports />;
   else if (path === '/admin/customers') page = <CustomersPage />;
   else if (m('/admin/customers/:id')) page = <CustomerDetailPage id={m('/admin/customers/:id')!.id} />;
+  else if (path === '/admin/chat') page = <LiveChatPage />;
+  else if (m('/admin/chat/:id')) page = <LiveChatPage id={m('/admin/chat/:id')!.id} />;
+  else if (path === '/admin/team-chat') page = <TeamChatPage />;
   else if (path === '/admin/support') page = <TicketsPage />;
   else if (m('/admin/support/:ref')) page = <TicketDetailPage reference={m('/admin/support/:ref')!.ref} />;
   else if (path === '/admin/team') page = <TeamPage />;
@@ -62,6 +75,8 @@ export default function AdminApp() {
   const badge = (to: string) => {
     if (to === '/admin/queue' && q?.manual_queue) return <span className="badge-count cnt">{q.manual_queue}</span>;
     if (to === '/admin/review' && q?.reviews) return <span className="badge-count cnt">{q.reviews}</span>;
+    if (to === '/admin/chat' && unread.support) return <span className="badge-count cnt">{unread.support}</span>;
+    if (to === '/admin/team-chat' && unread.team) return <span className="badge-count cnt">{unread.team}</span>;
     if (to === '/admin/support' && counts.data?.openTickets) return <span className="badge-count cnt">{counts.data.openTickets}</span>;
     return null;
   };

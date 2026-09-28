@@ -171,3 +171,13 @@ export async function sendTest(userId: number) {
   }
   return { devices: subs.length, delivered: ok };
 }
+
+// ---------- Messages to specific people (live chat replies, team chat) ----------
+export async function queueUserPush(userIds: number[], msg: PushMessage, uniqueKey: string) {
+  if (!pushConfigured() || !userIds.length) return;
+  await enqueue('push_users', { userIds, msg }, { uniqueKey: uniqueKey.slice(0, 200) });
+}
+registerJob('push_users', async ({ userIds, msg }: { userIds: number[]; msg: PushMessage }) => {
+  const subs = await q('SELECT * FROM push_subscriptions WHERE disabled_at IS NULL AND user_id = ANY($1)', [userIds]);
+  await pool(subs, 5, async (s) => { await deliver(s, msg, { urgency: 'high', ttl: 3600 }); });
+});
