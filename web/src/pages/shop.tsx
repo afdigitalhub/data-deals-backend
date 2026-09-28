@@ -6,6 +6,7 @@ import { SiteLayout } from '../components/layout';
 import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/BuyWidget';
 import { Alert, Empty, Modal, NetworkBadge } from '../components/ui';
 import { twiGreeting, dailyTwiLine } from '../lib/greeting';
+import { HowToBuyDemo, Ticker } from '../components/HowToBuyDemo';
 import { IcArrow, IcBolt, IcGlobe, IcHeadset, IcSearch, IcShield, IcTag, IcWifi } from '../components/icons';
 
 export function HomePage() {
@@ -51,6 +52,8 @@ export function HomePage() {
         </div>
       </section>
 
+      <Ticker />
+
       <section className="container lady-banner-wrap">
         <div className="lady-banner">
           <div className="lady-banner-text">
@@ -74,19 +77,9 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="section" style={{ background: 'var(--soft)' }}>
+      <section className="section demo-section">
         <div className="container">
-          <div className="eyebrow">How it works</div>
-          <h2>Top up in under a minute</h2>
-          <div className="grid-3" style={{ marginTop: 18 }}>
-            {[
-              ['Choose', 'Pick MTN, Telecel or AT, enter the number and choose a bundle or airtime amount.'],
-              ['Pay securely', 'Pay with Mobile Money or card on Paystack\'s secure checkout. We never see your PIN or card details.'],
-              ['Track it', 'Follow your order live and get a receipt. If anything goes wrong, our team will fix it or refund you.'],
-            ].map(([t, d], i) => (
-              <div className="card" key={t}><div className="net-badge" style={{ background: 'var(--yellow)', marginBottom: 12 }}>{i + 1}</div><h3>{t}</h3><p className="muted small" style={{ margin: 0 }}>{d}</p></div>
-            ))}
-          </div>
+          <HowToBuyDemo />
         </div>
       </section>
 
