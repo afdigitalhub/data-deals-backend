@@ -6,7 +6,7 @@ import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { TrackForm } from './track';
 import { Alert, CopyButton, Empty, Field, Input, Loading, NetworkBadge, Select, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
-import { IcBookmark, IcChat, IcList, IcPhone, IcPlus, IcTrash, IcWifi } from '../components/icons';
+import { IcArrow, IcBolt, IcBookmark, IcBox, IcCard, IcChart, IcChat, IcCheckCircle, IcClock, IcHeadset, IcLife, IcList, IcPhone, IcPlus, IcSearch, IcShield, IcTag, IcTrash, IcTruck, IcWifi } from '../components/icons';
 
 const TABS = [
   { to: '/account', label: 'Overview' },
@@ -27,7 +27,7 @@ function AccountShell({ children, title }: { children: ReactNode; title: string 
     <SiteLayout>
       <div className="container account-layout">
         <aside>
-          <div style={{ marginBottom: 12 }}><div style={{ fontWeight: 800, fontSize: '1.15rem' }}>Hello, {user.fullName.split(' ')[0]} 👋</div><div className="small muted">{user.email}</div></div>
+          <div className="acct-hello" style={{ marginBottom: 12 }}><div style={{ fontWeight: 800, fontSize: '1.15rem' }}>Akwaaba, {user.fullName.split(' ')[0]} 👋</div><div className="small muted">{user.email}</div></div>
           <nav className="side-nav" aria-label="Account">{tabs.map((t) => <Link key={t.to} to={t.to} className={path === t.to || (t.to !== '/account' && path.startsWith(t.to)) ? 'active' : ''}>{t.label}</Link>)}</nav>
           <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={async () => { await logout(); navigate('/'); }}>Log out</button>
         </aside>
@@ -57,31 +57,105 @@ function OrderList({ orders }: { orders: OrderRow[] }) {
   );
 }
 
+/** Twi greeting by time of day (Ghana time), with an English line for everyone. */
+export function twiGreeting(d = new Date()) {
+  const h = d.getHours();
+  if (h >= 4 && h < 12) return { twi: 'Maakye', en: 'Good morning' };
+  if (h >= 12 && h < 16) return { twi: 'Maaha', en: 'Good afternoon' };
+  return { twi: 'Maadwo', en: 'Good evening' };
+}
+const TWI_LINES = [
+  { twi: 'Akwaaba bio!', en: 'Welcome back!' },
+  { twi: 'Wo ho te sɛn?', en: 'How are you today?' },
+  { twi: 'Yɛda wo ase!', en: 'Thank you for choosing Data Deals.' },
+  { twi: 'Nyame nhyira wo!', en: 'God bless you!' },
+];
+
+interface Summary { delivered: number; ordersToday: number; deliveredThisMonth: number; spentThisMonthMinor: number; dataThisMonthMb: number; inProgress: number; totalOrders: number; savedNumbers: number }
+
 export function AccountHome() {
+  const { user, config } = useApp();
   const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [notes, setNotes] = useState<any[]>([]);
+  const [sum, setSum] = useState<Summary | null>(null);
   useEffect(() => {
     get('/api/account/orders?pageSize=5').then((r) => setOrders(r.orders)).catch(() => setOrders([]));
     get('/api/account/notifications').then((r) => setNotes(r.notifications)).catch(() => {});
+    get('/api/account/summary').then((r) => setSum(r.summary)).catch(() => {});
   }, []);
   const unread = notes.filter((n) => !n.read_at);
+  const g = twiGreeting();
+  const firstName = (user?.fullName || '').split(' ')[0];
+  const isNew = sum !== null && sum.totalOrders === 0;
+  const line = isNew ? { twi: 'Akwaaba!', en: 'Welcome to Data Deals. Your first bundle is a few taps away.' } : TWI_LINES[new Date().getDate() % TWI_LINES.length];
+  const stat = (v: string | number | undefined) => (sum === null ? '—' : v);
   return (
     <AccountShell title="My account">
-      <div className="quick-grid" style={{ marginBottom: 18 }}>
-        <Link to="/airtime" className="quick"><div className="qi"><IcPhone /></div>Airtime</Link>
-        <Link to="/data-bundles" className="quick"><div className="qi"><IcWifi /></div>Data Bundles</Link>
-        <Link to="/account/orders" className="quick"><div className="qi" style={{ background: '#EDE7FF' }}><IcList /></div>My Orders</Link>
-        <Link to="/account/recipients" className="quick"><div className="qi" style={{ background: '#FFE3CF' }}><IcBookmark /></div>Saved Numbers</Link>
+      <div className="dash-hero">
+        <div className="dash-hero-glow" aria-hidden="true" />
+        <div className="dash-kicker"><span className="dash-dot" /> {g.en}</div>
+        <h1 className="dash-hello">{g.twi}, <span>{firstName}</span> 👋</h1>
+        <p className="dash-twi"><b>{line.twi}</b> <span>{line.en}</span></p>
+        <div className="dash-actions">
+          <Link to="/data-bundles" className="btn dash-btn-primary"><IcWifi /> Buy Data</Link>
+          <Link to="/airtime" className="btn dash-btn-ghost"><IcPhone /> Airtime</Link>
+          <Link to="/track" className="btn dash-btn-ghost"><IcSearch /> Track order</Link>
+        </div>
+        <div className="dash-stats">
+          <div className="dash-stat"><div className="dash-stat-ic"><IcCheckCircle /></div><div><div className="dash-stat-v">{stat(sum?.delivered)}</div><div className="dash-stat-l">Delivered</div></div></div>
+          <div className="dash-stat"><div className="dash-stat-ic"><IcBox /></div><div><div className="dash-stat-v">{stat(sum?.ordersToday)}</div><div className="dash-stat-l">Orders today</div></div></div>
+          <div className="dash-stat"><div className="dash-stat-ic"><IcWifi /></div><div><div className="dash-stat-v">{stat(sum ? (sum.dataThisMonthMb ? dataSize(sum.dataThisMonthMb) : '0 GB') : undefined)}</div><div className="dash-stat-l">Data this month</div></div></div>
+          <div className="dash-stat"><div className="dash-stat-ic"><IcCard /></div><div><div className="dash-stat-v">{stat(sum ? ghs(sum.spentThisMonthMinor) : undefined)}</div><div className="dash-stat-l">Spent this month</div></div></div>
+        </div>
       </div>
+
+      {sum && sum.inProgress > 0 && (
+        <Link to="/account/orders" className="dash-banner"><IcClock /> <span><b>{sum.inProgress} order{sum.inProgress > 1 ? 's' : ''} in progress.</b> Tap to follow {sum.inProgress > 1 ? 'them' : 'it'} live.</span> <IcArrow /></Link>
+      )}
+
+      <div className="dash-card">
+        <div className="dash-card-head"><h3>Place new order</h3><span className="tiny muted">Choose a network</span></div>
+        <div className="net-tiles">
+          {(['MTN', 'TELECEL', 'AT'] as const).map((c) => (
+            <Link key={c} to={`/data-bundles?network=${c}`} className={`net-tile net-${c.toLowerCase()}`}>
+              <NetworkBadge code={c} />
+              <span className="net-tile-name">{NETWORK_META[c].name}</span>
+              <span className="net-tile-sub">Data bundles</span>
+            </Link>
+          ))}
+          <Link to="/airtime" className="net-tile net-air">
+            <span className="net-air-ic"><IcBolt /></span>
+            <span className="net-tile-name">Airtime</span>
+            <span className="net-tile-sub">All networks</span>
+          </Link>
+        </div>
+      </div>
+
+      <div className="dash-card">
+        <div className="dash-card-head"><h3>Quick actions</h3></div>
+        <div className="qa-grid">
+          <Link to="/account/orders" className="qa"><span className="qa-ic"><IcList /></span>My orders</Link>
+          <Link to="/account/recipients" className="qa"><span className="qa-ic"><IcBookmark /></span>Saved numbers{sum && sum.savedNumbers > 0 ? <em>{sum.savedNumbers}</em> : null}</Link>
+          <Link to="/track" className="qa"><span className="qa-ic"><IcTruck /></span>Track order</Link>
+          <Link to="/rates" className="qa"><span className="qa-ic"><IcTag /></span>Prices</Link>
+          <Link to="/account/tickets" className="qa"><span className="qa-ic"><IcHeadset /></span>Support</Link>
+          <Link to="/account/profile" className="qa"><span className="qa-ic"><IcShield /></span>Security</Link>
+          {config?.agentsEnabled && <Link to="/account/agent" className="qa"><span className="qa-ic"><IcChart /></span>Agent earnings</Link>}
+          <Link to="/contact" className="qa"><span className="qa-ic"><IcChat /></span>Talk to us</Link>
+          {!config?.agentsEnabled && <Link to="/how-it-works" className="qa"><span className="qa-ic"><IcLife /></span>How it works</Link>}
+        </div>
+      </div>
+
       {unread.length > 0 && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="row between"><h3 style={{ margin: 0 }}>Updates</h3><button className="link" onClick={async () => { await post('/api/account/notifications/read'); setNotes(notes.map((n) => ({ ...n, read_at: new Date().toISOString() }))); }}>Mark all read</button></div>
+        <div className="dash-card">
+          <div className="dash-card-head"><h3>Updates</h3><button className="link small" onClick={async () => { await post('/api/account/notifications/read'); setNotes(notes.map((n) => ({ ...n, read_at: new Date().toISOString() }))); }}>Mark all read</button></div>
           <ul className="event-list">{unread.slice(0, 5).map((n) => <li key={n.id}><b>{n.title}</b><div className="small muted">{n.body}</div><div className="tiny muted">{timeAgo(n.created_at)}</div></li>)}</ul>
         </div>
       )}
-      <div className="card">
-        <div className="row between"><h3 style={{ margin: 0 }}>Recent orders</h3><Link to="/account/orders" className="link small">View all</Link></div>
-        {orders === null ? <Loading /> : orders.length ? <OrderList orders={orders} /> : <Empty icon={<IcList />} title="No orders yet">Your purchases will appear here. <Link to="/" className="link">Buy now</Link></Empty>}
+
+      <div className="dash-card">
+        <div className="dash-card-head"><h3>Recent orders</h3><Link to="/account/orders" className="link small">View all</Link></div>
+        {orders === null ? <Loading /> : orders.length ? <OrderList orders={orders} /> : <Empty icon={<IcList />} title="No orders yet">Your purchases will appear here. <Link to="/data-bundles" className="link">Buy your first bundle</Link></Empty>}
       </div>
     </AccountShell>
   );

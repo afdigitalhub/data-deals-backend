@@ -60,6 +60,25 @@ export function registerAccountRoutes(r: Router) {
     };
   });
 
+  // Dashboard numbers — real figures from this customer's own orders only.
+  r.get('/api/account/summary', requireUser, async (ctx) => {
+    const s = await one(`SELECT
+        count(*) FILTER (WHERE status = 'successful')::int AS delivered,
+        count(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS orders_today,
+        count(*) FILTER (WHERE status = 'successful' AND delivered_at >= date_trunc('month', now()))::int AS delivered_month,
+        COALESCE(sum(total_minor) FILTER (WHERE status = 'successful' AND delivered_at >= date_trunc('month', now())), 0)::bigint AS spent_month_minor,
+        COALESCE(sum((product_snapshot->>'data_mb')::int) FILTER (WHERE kind = 'data' AND status = 'successful' AND delivered_at >= date_trunc('month', now())), 0)::bigint AS data_month_mb,
+        count(*) FILTER (WHERE status IN ('paid','queued','processing','needs_review'))::int AS in_progress,
+        count(*)::int AS total_orders
+      FROM orders WHERE user_id = $1 AND is_test = false`, [ctx.user!.id]);
+    const saved = await one('SELECT count(*)::int AS n FROM saved_recipients WHERE user_id = $1', [ctx.user!.id]);
+    return { summary: {
+      delivered: s.delivered, ordersToday: s.orders_today, deliveredThisMonth: s.delivered_month,
+      spentThisMonthMinor: Number(s.spent_month_minor), dataThisMonthMb: Number(s.data_month_mb),
+      inProgress: s.in_progress, totalOrders: s.total_orders, savedNumbers: saved.n,
+    } };
+  });
+
   r.get('/api/account/orders/:ref', requireUser, async (ctx) => {
     const o = await one('SELECT * FROM orders WHERE reference = $1 AND user_id = $2', [ctx.params.ref.toUpperCase(), ctx.user!.id]);
     if (!o) throw notFound('Order not found');
