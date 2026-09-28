@@ -7,33 +7,6 @@ import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/
 import { Alert, Empty, Modal, NetworkBadge } from '../components/ui';
 import { IcArrow, IcBolt, IcGlobe, IcHeadset, IcSearch, IcShield, IcTag, IcWifi } from '../components/icons';
 
-function HeroArt() {
-  // Abstract illustration (no people / stock photos): a phone receiving a bundle.
-  return (
-    <svg className="hero-art" viewBox="0 0 300 360" aria-hidden="true">
-      <circle cx="150" cy="190" r="140" fill="#FFE55C" />
-      <circle cx="150" cy="190" r="100" fill="none" stroke="#101114" strokeOpacity=".12" strokeWidth="2" />
-      <rect x="92" y="70" width="116" height="236" rx="22" fill="#101114" />
-      <rect x="101" y="84" width="98" height="208" rx="14" fill="#fff" />
-      <rect x="112" y="100" width="76" height="30" rx="8" fill="#FFD400" />
-      <path d="M152 104 141 118h7l-2 9 11-14h-7l2-9Z" fill="#101114" />
-      <rect x="112" y="142" width="54" height="8" rx="4" fill="#E9E7E0" />
-      <rect x="112" y="158" width="76" height="8" rx="4" fill="#E9E7E0" />
-      <rect x="112" y="186" width="76" height="46" rx="10" fill="#F7F6F2" />
-      <text x="150" y="215" textAnchor="middle" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="800" fontSize="18" fill="#101114">2GB</text>
-      <rect x="112" y="246" width="76" height="26" rx="8" fill="#101114" />
-      <g transform="translate(206 92)">
-        <rect width="92" height="44" rx="12" fill="#fff" />
-        <circle cx="20" cy="22" r="11" fill="#188A4A" />
-        <path d="m15 22 4 4 7-8" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <rect x="38" y="15" width="44" height="6" rx="3" fill="#101114" />
-        <rect x="38" y="26" width="30" height="5" rx="2.5" fill="#C9C7C0" />
-      </g>
-      <path d="M40 120a70 70 0 0 1 30-40M24 104a100 100 0 0 1 40-56" stroke="#101114" strokeWidth="5" strokeLinecap="round" fill="none" />
-    </svg>
-  );
-}
-
 export function HomePage() {
   usePageTitle('Data Deals — Airtime & Data Bundles for MTN, Telecel and AT');
   const { user, products, loadProducts } = useApp();
@@ -43,7 +16,7 @@ export function HomePage() {
     <SiteLayout onYellow>
       <section className="hero">
         <div className="container hero-inner">
-          <div>
+          <div className="hero-copy">
             <div className="hero-kicker">FAST <i /> SECURE <i /> RELIABLE</div>
             <h1>Stay Connected.<span className="accent">Always.</span></h1>
             <p className="lead">Buy airtime and data bundles for MTN, Telecel and AT. Fast, simple and reliable.</p>
@@ -59,8 +32,19 @@ export function HomePage() {
               {user && <Link to="/account/orders" className="btn btn-outline btn-lg">My orders</Link>}
             </div>
           </div>
-          <HeroArt />
+          <img className="hero-lady" src="/images/hero-lady.webp" alt="" width="372" height="540" decoding="async" />
           <BuyWidget />
+        </div>
+      </section>
+
+      <section className="container lady-banner-wrap">
+        <div className="lady-banner">
+          <div className="lady-banner-text">
+            <h2>Data and airtime in seconds</h2>
+            <p>MTN, Telecel and AT. Pay with Mobile Money.</p>
+            <a href="#buy" className="btn btn-dark btn-sm" onClick={(e) => { e.preventDefault(); document.getElementById('buy')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>Buy Now</a>
+          </div>
+          <img src="/images/hero-lady.webp" alt="" width="372" height="540" loading="lazy" decoding="async" />
         </div>
       </section>
 

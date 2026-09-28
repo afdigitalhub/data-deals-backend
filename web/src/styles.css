@@ -158,7 +158,6 @@ p { margin: 0 0 1em; }
 .hero::before { content: ''; position: absolute; width: 720px; height: 720px; right: -160px; top: -260px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,236,120,.9), rgba(255,212,0,0)); pointer-events: none; }
 .hero-inner { position: relative; display: grid; gap: 28px; padding-top: 28px; padding-bottom: 40px; align-items: start; }
 @media (min-width: 980px) { .hero-inner { grid-template-columns: 1.15fr .85fr; gap: 40px; padding-top: 52px; padding-bottom: 64px; align-items: center; } }
-@media (min-width: 1200px) { .hero-inner { grid-template-columns: minmax(0, 1fr) 230px 420px; gap: 28px; } }
 .hero-kicker { display: inline-flex; gap: 10px; align-items: center; border: 1.5px solid rgba(16,17,20,.85); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: .76rem; letter-spacing: .08em; margin-bottom: 18px; background: rgba(255,255,255,.18); }
 .hero-kicker i { width: 4px; height: 4px; border-radius: 50%; background: var(--ink); display: inline-block; }
 .hero h1 { margin-bottom: 14px; }
@@ -168,8 +167,6 @@ p { margin: 0 0 1em; }
 .feature { text-align: center; font-size: .8rem; font-weight: 700; line-height: 1.25; }
 .feature .ic { width: 56px; height: 56px; margin: 0 auto 8px; border-radius: 14px; background: rgba(255,255,255,.42); display: flex; align-items: center; justify-content: center; }
 .feature .ic svg { width: 26px; height: 26px; }
-.hero-art { display: none; }
-@media (min-width: 1200px) { .hero-art { display: block; width: 230px; align-self: end; margin-bottom: -64px; pointer-events: none; } }
 
 /* ---------- Buy widget ---------- */
 .buy { position: relative; z-index: 2; }
@@ -363,3 +360,22 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 @media (max-width: 400px) { .tab { font-size: .9rem; gap: 6px; } .tab svg { width: 18px; height: 18px; } }
 @media (min-width: 1200px) { .hero h1 { font-size: 3.2rem; } }
 
+
+/* Hero photo (desktop) and phone banner */
+.hero-lady { display: none; }
+.hero-copy { position: relative; z-index: 2; }
+@media (min-width: 1200px) {
+  .hero-inner { grid-template-columns: minmax(0, 1fr) 420px; }
+  .hero-copy { max-width: 540px; }
+  .hero-lady { display: block; position: absolute; bottom: 0; right: 372px; height: 490px; width: auto; z-index: 1; pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%), linear-gradient(to bottom, transparent 0, #000 7%), linear-gradient(to left, transparent 0, #000 12%);
+    -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent 0, #000 9%), linear-gradient(to bottom, transparent 0, #000 7%), linear-gradient(to left, transparent 0, #000 12%); mask-composite: intersect; }
+  .hero .features { max-width: 430px; }
+}
+.lady-banner-wrap { padding-top: 24px; }
+.lady-banner { background: var(--yellow); border-radius: 20px; display: flex; align-items: stretch; overflow: hidden; min-height: 180px; }
+.lady-banner-text { padding: 20px 0 20px 20px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 8px; flex: 1; }
+.lady-banner-text h2 { font-size: 1.3rem; margin: 0; line-height: 1.2; }
+.lady-banner-text p { margin: 0; font-size: .9rem; color: var(--ink-2); }
+.lady-banner img { width: 150px; height: auto; object-fit: cover; object-position: 70% 0; align-self: stretch; flex-shrink: 0; }
+@media (min-width: 1200px) { .lady-banner-wrap { display: none; } }
