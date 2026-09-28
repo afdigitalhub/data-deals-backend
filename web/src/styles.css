@@ -137,8 +137,8 @@ p { margin: 0 0 1em; }
 .logo svg { width: 30px; height: 34px; }
 .logo .deals { color: var(--amber); }
 .on-yellow .logo .deals, .hero .logo .deals { color: #E07A00; }
-.nav { display: none; gap: 4px; margin-left: 20px; }
-.nav a { text-decoration: none; font-weight: 600; font-size: .95rem; padding: 8px 12px; border-radius: 10px; color: var(--ink-2); position: relative; }
+.nav { display: none; gap: 2px; margin-left: 12px; }
+.nav a { text-decoration: none; font-weight: 600; font-size: .92rem; padding: 8px 10px; border-radius: 10px; color: var(--ink-2); position: relative; }
 .nav a:hover { background: rgba(16,17,20,.06); }
 .nav a.active::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 2.5px; border-radius: 2px; background: var(--ink); }
 .header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
@@ -147,7 +147,9 @@ p { margin: 0 0 1em; }
 .icon-btn:hover { background: rgba(16,17,20,.06); }
 .icon-btn svg { width: 22px; height: 22px; }
 .desktop-only { display: none !important; }
-@media (min-width: 980px) { .nav { display: flex; } .desktop-only { display: inline-flex !important; } .mobile-only { display: none !important; } }
+@media (min-width: 980px) { .desktop-only { display: inline-flex !important; } .mobile-only { display: none !important; } }
+@media (min-width: 1180px) { .nav { display: flex; } .menu-toggle { display: none !important; } }
+.logo, .nav a { white-space: nowrap; }
 .mobile-menu { position: fixed; inset: var(--header-h) 0 0 0; background: #fff; z-index: 39; padding: 16px; overflow-y: auto; }
 .mobile-menu a { display: block; padding: 14px 8px; font-weight: 700; font-size: 1.1rem; text-decoration: none; border-bottom: 1px solid var(--line-2); }
 
@@ -360,3 +362,4 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .tab { white-space: nowrap; }
 @media (max-width: 400px) { .tab { font-size: .9rem; gap: 6px; } .tab svg { width: 18px; height: 18px; } }
 @media (min-width: 1200px) { .hero h1 { font-size: 3.2rem; } }
+

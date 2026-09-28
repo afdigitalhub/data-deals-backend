@@ -8,6 +8,7 @@ import { AirtimePage, DataBundlesPage, HomePage, RatesPage } from './pages/shop'
 import { CheckoutPage, OrderPage } from './pages/checkout';
 import { ForgotPage, InviteAcceptPage, LoginPage, RegisterPage, ResetPage } from './pages/auth';
 import { AccountAgent, AccountHome, AccountOrders, AccountProfile, AccountRecipients, AccountTickets, GuestOrdersPage } from './pages/account';
+import { TrackPage } from './pages/track';
 import { AboutPage, ContactPage, HowItWorksPage, NotFoundPage, PrivacyPage, RefundPolicyPage, SupportPage, TermsPage, TicketPage } from './pages/content';
 
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -19,6 +20,7 @@ const routes: R[] = [
   ['/data-bundles', () => <DataBundlesPage />],
   ['/rates', () => <RatesPage />],
   ['/how-it-works', () => <HowItWorksPage />],
+  ['/track', () => <TrackPage />],
   ['/support', () => <SupportPage />],
   ['/about', () => <AboutPage />],
   ['/contact', () => <ContactPage />],

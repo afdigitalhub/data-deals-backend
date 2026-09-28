@@ -10,6 +10,7 @@ const NAV = [
   { to: '/data-bundles', label: 'Data Bundles' },
   { to: '/rates', label: 'Rates' },
   { to: '/how-it-works', label: 'How it Works' },
+  { to: '/track', label: 'Track Order' },
   { to: '/support', label: 'Support' },
 ];
 
@@ -41,7 +42,7 @@ export function Header({ onYellow = false }: { onYellow?: boolean }) {
                 <Link to="/register" className="btn btn-dark desktop-only" style={{ minWidth: 110 }}>Sign Up</Link>
               </>
             )}
-            <button className="icon-btn mobile-only" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <IcX /> : <IcMenu />}</button>
+            <button className="icon-btn menu-toggle" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <IcX /> : <IcMenu />}</button>
           </div>
         </div>
       </header>
@@ -91,7 +92,7 @@ export function Footer() {
           </div>
           <div>
             <h4>Help</h4>
-            <ul><li><Link to="/support">Support & FAQs</Link></li><li><Link to="/support#contact">Report a problem</Link></li><li><Link to="/contact">Contact</Link></li><li><Link to="/account/orders">Track an order</Link></li></ul>
+            <ul><li><Link to="/support">Support & FAQs</Link></li><li><Link to="/support#contact">Report a problem</Link></li><li><Link to="/contact">Contact</Link></li><li><Link to="/track">Track an order</Link></li></ul>
           </div>
           <div>
             <h4>Company</h4>
@@ -108,10 +109,11 @@ export function Footer() {
 
 export function BottomNav() {
   const { path } = useLocation();
+  const { user } = useApp();
   const items = [
     { to: '/', label: 'Home', icon: <IcHome /> },
     { to: '/data-bundles', label: 'Deals', icon: <IcTag /> },
-    { to: '/account/orders', label: 'Orders', icon: <IcList /> },
+    { to: user ? '/account/orders' : '/track', label: 'Orders', icon: <IcList /> },
     { to: '/support', label: 'Support', icon: <IcHeadset /> },
     { to: '/account', label: 'Profile', icon: <IcUser /> },
   ];

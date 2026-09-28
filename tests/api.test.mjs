@@ -379,3 +379,20 @@ test('checkout passes the chosen payment method to the provider', async () => {
   const bad = await checkout(new Client(), product, { recipient_phone: '0241230001', payment_method: 'bitcoin' });
   assert.equal(bad.status, 400);
 });
+
+test('guests can track an order with order number + phone, nothing else', async () => {
+  const product = (await sql(`SELECT * FROM products WHERE name = '2GB' AND status = 'live' LIMIT 1`))[0];
+  const o = await checkout(new Client(), product, { recipient_phone: '0244445556', contact_phone: '0501234999' });
+  const c = new Client();
+  const ok = await c.post('/api/orders/track', { reference: o.data.reference.toLowerCase(), phone: '+233 24 444 5556' });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.reference, o.data.reference);
+  const view = await c.get(`/api/orders/${ok.data.reference}?t=${ok.data.accessToken}`);
+  assert.equal(view.status, 200);
+  const byContact = await c.post('/api/orders/track', { reference: o.data.reference, phone: '0501234999' });
+  assert.equal(byContact.status, 200);
+  const wrong = await c.post('/api/orders/track', { reference: o.data.reference, phone: '0209999999' });
+  assert.equal(wrong.status, 404);
+  const bad = await c.post('/api/orders/track', { reference: 'DDNOPE123', phone: '0244445556' });
+  assert.equal(bad.status, 404);
+});

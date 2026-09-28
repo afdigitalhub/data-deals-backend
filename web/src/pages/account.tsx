@@ -4,6 +4,7 @@ import { rememberedOrders, useApp } from '../lib/app-state';
 import { NETWORK_META, dataSize, dateOnly, dateTime, ghs, timeAgo } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
+import { TrackForm } from './track';
 import { Alert, CopyButton, Empty, Field, Input, Loading, NetworkBadge, Select, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
 import { IcBookmark, IcChat, IcList, IcPhone, IcPlus, IcTrash, IcWifi } from '../components/icons';
 
@@ -122,7 +123,8 @@ export function GuestOrdersPage() {
     <SiteLayout>
       <div className="container" style={{ maxWidth: 560, padding: '24px 16px 48px' }}>
         <h1 style={{ fontSize: '1.8rem' }}>Track an order</h1>
-        <p className="muted">Log in to see all your orders, or open one you placed on this phone.</p>
+        <p className="muted">Enter your order number and phone number, or log in to see all your orders.</p>
+        <div className="card" style={{ marginBottom: 16 }}><TrackForm compact /></div>
         <div className="row" style={{ marginBottom: 16 }}><Link to="/login?next=/account/orders" className="btn btn-dark">Log in</Link><Link to="/register" className="btn btn-outline">Create account</Link></div>
         {guest.length > 0 ? (
           <div className="card"><h3>Orders on this device</h3>{guest.map((g) => <Link key={g.r} to={`/order/${g.r}?t=${g.t}`} className="list-row"><span className="mono" style={{ fontWeight: 700 }}>{g.r}</span><span className="small muted" style={{ marginLeft: 'auto' }}>{dateOnly(new Date(g.at))}</span></Link>)}</div>

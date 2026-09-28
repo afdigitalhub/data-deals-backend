@@ -122,6 +122,16 @@ export function registerPublicRoutes(r: Router) {
     return { order: await publicOrder(o) };
   });
 
+  // Guest order tracking: the order number plus the phone number used on the order (recipient or contact).
+  r.post('/api/orders/track', rateLimit('track', 15, 10 * 60_000), async (ctx) => {
+    const b = z.object({ reference: z.string().trim().min(6).max(20), phone: zPhone }).parse(ctx.body);
+    const reference = b.reference.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!(config.isTest && process.env.RATE_LIMITS !== 'on')) hit(`track-ref:${reference}`, 10, 60 * 60_000);
+    const o = await one(`SELECT reference FROM orders WHERE reference = $1 AND (recipient_phone = $2 OR contact_phone = $2)`, [reference, b.phone]);
+    if (!o) throw notFound('We could not find an order with that order number and phone number. Check both and try again.');
+    return { reference: o.reference, accessToken: accessToken('order', o.reference) };
+  });
+
   r.post('/api/orders/:ref/pay', rateLimit('pay-again', 10, 10 * 60_000), async (ctx) => {
     const o = await loadOrderForViewer(ctx, ctx.params.ref);
     if (!['pending_payment', 'payment_failed'].includes(o.status)) throw conflict('This order no longer needs payment');

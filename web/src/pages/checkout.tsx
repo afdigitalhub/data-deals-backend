@@ -225,7 +225,7 @@ export function OrderPage({ reference }: { reference: string }) {
 
         <div className="card-soft" style={{ marginTop: 16 }}>
           <b>Need help with this order?</b>
-          <p className="small muted" style={{ margin: '4px 0 12px' }}>Quote your reference <span className="mono">{order.reference}</span> and we'll look into it.</p>
+          <p className="small muted" style={{ margin: '4px 0 12px' }}>Quote your order number <span className="mono">{order.reference}</span> and we'll look into it. You can also check this order any time at <Link to="/track" className="link">Track order</Link> with that number and your phone number.</p>
           <div className="row"><Link to={supportLink} className="btn btn-dark btn-sm">Report a problem</Link>{s === 'failed' && <Link to={`/support?order=${order.reference}${token ? `&t=${token}` : ''}&type=refund#contact`} className="btn btn-light btn-sm"><IcRefund width={16} height={16} />Request refund</Link>}</div>
         </div>
       </div>
