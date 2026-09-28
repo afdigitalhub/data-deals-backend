@@ -5,6 +5,7 @@ import { createApp } from './app.js';
 import { startWorker, stopWorker } from './services/jobs.js';
 import { periodicTasks } from './services/orders.js';
 import { log } from './lib/log.js';
+import { probeDatamartPackages } from './suppliers/datamart-probe.js';
 
 async function main() {
   const problems = assertProductionConfig();
@@ -19,6 +20,7 @@ async function main() {
   server.requestTimeout = 60_000;
   server.listen(config.port, () => log.info('Data Deals running', { port: config.port, env: config.nodeEnv, payments: paymentsMode(), baseUrl: config.publicBaseUrl }));
   if (config.workerEnabled) startWorker(periodicTasks);
+  setTimeout(() => { probeDatamartPackages().catch(() => {}); }, 3000);
 
   const shutdown = (sig: string) => {
     log.info('shutting down', { sig });
