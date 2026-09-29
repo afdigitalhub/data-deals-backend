@@ -87,3 +87,27 @@ test('team chat: staff only, read receipts, unread badge for the other founder',
   assert.ok(to.data.reads.find((r) => r.name === 'Ben').lastReadId >= to.data.messages[0].id, 'owner can see Ben read it');
   assert.equal((await owner.post('/api/admin/team-chat', { message: '' })).status, 400);
 });
+
+test('team can message a guest customer from an order; the guest sees it via their order and can reply', async () => {
+  const product = (await sql(`SELECT * FROM products WHERE status = 'live' LIMIT 1`))[0];
+  const guest = new Client();
+  const o = await checkout(guest, product, { recipient_phone: '0592290174', email: 'emilia@example.com' });
+  const ref = o.data.reference; const tok = o.data.accessToken;
+  const r = await owner.post(`/api/admin/orders/${ref}/message`, { message: 'Hello Emilia, your data is on the way 🙏' });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  // without proof of the order: nothing
+  assert.equal((await new Client().get('/api/chat', { 'X-Order-Ref': ref, 'X-Order-Token': 'wrong-token-wrong-token' })).data.conversation, null);
+  // with the order's private token: sees the message, unread count, and gets a chat token of its own
+  const v = await guest.get('/api/chat', { 'X-Order-Ref': ref, 'X-Order-Token': tok });
+  assert.equal(v.data.conversation.orderReference, ref);
+  assert.equal(v.data.unread, 1);
+  assert.ok(v.data.messages.some((m) => m.sender === 'staff' && m.body.startsWith('Hello Emilia')));
+  assert.ok(v.data.token, 'guest browser receives its own chat token');
+  // reply using the chat token alone
+  assert.equal((await guest.post('/api/chat/messages', { message: 'Thank you!' }, { 'X-Chat-Token': v.data.token })).status, 200);
+  const staffView = await owner.get(`/api/admin/chat/${r.data.conversationId}`);
+  assert.equal(staffView.data.messages.at(-1).body, 'Thank you!');
+  // a second message from the team goes to the same conversation
+  const r2 = await owner.post(`/api/admin/orders/${ref}/message`, { message: 'Delivered now ✅' });
+  assert.equal(r2.data.conversationId, r.data.conversationId);
+});

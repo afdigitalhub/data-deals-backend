@@ -4,7 +4,7 @@ import { NETWORK_META, dateTime, ghs } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { Alert, CopyButton, Field, Input, Loading, Modal, NetworkBadge, StatusPill, Spinner, Textarea, errMsg } from '../components/ui';
 import { Pager, Panel, useLoad } from './common';
-import { IcBack } from '../components/icons';
+import { IcBack, IcChat } from '../components/icons';
 
 const STATUSES = ['pending_payment', 'paid', 'queued', 'processing', 'needs_review', 'successful', 'failed', 'refund_pending', 'refunded', 'payment_failed', 'expired'];
 
@@ -91,6 +91,7 @@ export function OrderDetailPage({ reference }: { reference: string }) {
           {a.retry && <button className="btn btn-dark btn-sm" onClick={() => setAction('retry')}>Retry delivery</button>}
           {a.refund && <button className="btn btn-light btn-sm" onClick={() => setAction('refund')}>Refund</button>}
           {a.reconcile && <button className="btn btn-light btn-sm" onClick={() => setAction('reconcile')}>Check Paystack / supplier</button>}
+          <button className="btn btn-yellow btn-sm" onClick={() => setAction('message')}><IcChat width={16} height={16} /> Message customer</button>
           {!o.escalated && <button className="btn btn-ghost btn-sm" onClick={() => setAction('escalate')}>Escalate</button>}
         </div>
       </div>
@@ -160,6 +161,7 @@ export function OrderDetailPage({ reference }: { reference: string }) {
 
       {action === 'deliver' && <DeliverModal o={o} unknown={a.supplierCheckRequired} onClose={() => setAction(null)} onDone={() => done('Delivery recorded.')} />}
       {action === 'fail' && <FailModal o={o} unknown={a.supplierCheckRequired} onClose={() => setAction(null)} onDone={() => done('Order marked as failed.')} />}
+      {action === 'message' && <MessageCustomer reference={o.reference} onClose={() => setAction(null)} />}
       {action === 'retry' && <SimpleAction title="Retry delivery" onClose={() => setAction(null)} confirmLabel="Retry now" body={<p>The previous supplier request was a confirmed failure, so it is safe to try again. A new request will be created (or it goes to the manual queue if no supplier is connected).</p>} run={() => post(`/api/admin/orders/${o.reference}/retry`)} onDone={() => done('Retry queued.')} />}
       {action === 'refund' && <ReasonAction title="Refund this order" label="Reason for refund" confirmLabel={`Refund ${ghs(o.total_minor)} via Paystack`} onClose={() => setAction(null)} body={<Alert kind="warn">Only refund if you are sure the top-up was NOT delivered. This sends the money back to the customer through Paystack.</Alert>} run={(reason) => post(`/api/admin/orders/${o.reference}/refund`, { reason })} onDone={() => done('Refund submitted to Paystack. It will show as completed once Paystack confirms.')} />}
       {action === 'escalate' && <ReasonAction title="Escalate order" label="What needs attention?" confirmLabel="Escalate" onClose={() => setAction(null)} run={(note) => post(`/api/admin/orders/${o.reference}/escalate`, { note })} onDone={() => done('Order escalated.')} />}
@@ -235,6 +237,26 @@ export function ReasonAction({ title, label, body, confirmLabel, run, onClose, o
       <Field label={label} hint="At least 5 characters"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
       {err && <div style={{ marginBottom: 12 }}><Alert>{err}</Alert></div>}
       <button className="btn btn-dark btn-block" disabled={busy || reason.trim().length < 5} onClick={async () => { setBusy(true); setErr(null); try { await run(reason); onDone(); } catch (e) { setErr(errMsg(e)); setBusy(false); } }}>{busy ? <Spinner /> : confirmLabel}</button>
+    </Modal>
+  );
+}
+
+function MessageCustomer({ reference, onClose }: { reference: string; onClose: () => void }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <Modal title="Message the customer" onClose={onClose}>
+      <p className="small muted" style={{ marginTop: 0 }}>They'll see it in the chat on the website — guests see it when they open their order page (it opens automatically), customers with an account see it anywhere on the site. If they turned on notifications, their phone gets an alert too.</p>
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} style={{ minHeight: 110 }} placeholder="e.g. Hello, thank you for your order. Our supplier is still processing it — we'll update you shortly 🙏" />
+      {err && <div style={{ marginTop: 10 }}><Alert>{err}</Alert></div>}
+      <div className="row" style={{ marginTop: 14, justifyContent: 'flex-end' }}>
+        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        <button className="btn btn-dark" disabled={busy || !text.trim()} onClick={async () => {
+          setBusy(true); setErr(null);
+          try { const r = await post<{ conversationId: number }>(`/api/admin/orders/${reference}/message`, { message: text.trim() }); navigate(`/admin/chat/${r.conversationId}`); } catch (e) { setErr(errMsg(e)); setBusy(false); }
+        }}>{busy ? <Spinner /> : 'Send message'}</button>
+      </div>
     </Modal>
   );
 }

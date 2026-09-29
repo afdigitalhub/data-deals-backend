@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiError, get, post, safeStorage } from '../lib/api';
-import { useApp } from '../lib/app-state';
+import { rememberedOrders, useApp } from '../lib/app-state';
 import { useLocation } from '../lib/router';
 import { Spinner } from './ui';
 import { IcChat, IcX } from './icons';
@@ -32,8 +32,16 @@ export function ChatWidget() {
   const orderMatch = path.match(/^\/order\/([A-Za-z0-9]+)/);
   const orderRef = orderMatch ? orderMatch[1].toUpperCase() : undefined;
   const orderToken = search.get('t') || undefined;
-  const headers = token && !user ? { 'X-Chat-Token': token } : undefined;
-  const hasChat = !!user || !!token;
+  // Guests: prove access to an order (theirs, from this page or remembered on this phone) so they can see
+  // chats the team started about it; plus their own chat token once they have one.
+  const remembered = !user && !orderToken ? rememberedOrders()[0] : undefined;
+  const orderAuth = !user ? (orderRef && orderToken ? { r: orderRef, t: orderToken } : remembered ? { r: remembered.r, t: remembered.t } : null) : null;
+  const headers: Record<string, string> | undefined = user ? undefined : {
+    ...(token ? { 'X-Chat-Token': token } : {}),
+    ...(orderAuth ? { 'X-Order-Ref': orderAuth.r, 'X-Order-Token': orderAuth.t } : {}),
+  };
+  const hasChat = !!user || !!token || !!orderAuth;
+  const autoOpened = useRef(false);
 
   useEffect(() => { if (search.get('chat') === 'open') setOpen(true); }, [search]);
   useEffect(() => { lastId.current = 0; setMsgs([]); setData(null); }, [user?.id]);
@@ -41,8 +49,11 @@ export function ChatWidget() {
   const refresh = useCallback(async (markRead: boolean) => {
     if (!hasChat) return;
     try {
-      const d = await get<ChatData>(`/api/chat?since=${lastId.current}${markRead ? '&read=1' : ''}`, headers);
+      const d = await get<ChatData & { token?: string | null }>(`/api/chat?since=${lastId.current}${markRead ? '&read=1' : ''}`, headers);
+      if (d.token) { safeStorage().set(TOKEN_KEY, d.token); setToken(d.token); }
       setData(d);
+      // A message from the team about this order: open the chat so the customer sees it straight away.
+      if (!autoOpened.current && orderRef && d.unread > 0) { autoOpened.current = true; setOpen(true); }
       if (d.messages.length) {
         lastId.current = d.messages[d.messages.length - 1].id;
         setMsgs((cur) => { const seen = new Set(cur.map((m) => m.id)); return [...cur, ...d.messages.filter((m) => !seen.has(m.id))]; });
@@ -50,7 +61,7 @@ export function ChatWidget() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 404 && token) { safeStorage().remove(TOKEN_KEY); setToken(null); }
     }
-  }, [hasChat, token, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasChat, token, user?.id, orderAuth?.r]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll: every 3s while open, every 25s in the background for the unread badge.
   useEffect(() => {
