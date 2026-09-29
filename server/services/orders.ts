@@ -349,8 +349,9 @@ export async function checkDelivery(attemptId: number, n: number) {
   // Keep the latest supplier answer visible to admins (e.g. "DataMart: waiting").
   await q(`UPDATE delivery_attempts SET response_summary = $2, supplier_reference = COALESCE(supplier_reference, $3) WHERE id = $1`,
     [attemptId, { outcome: r.outcome, message: r.message ?? null, checks: n, checkedAt: new Date().toISOString() }, r.supplierReference ?? null]);
-  if (n < 20) {
-    await enqueue('check_delivery', { attemptId, n: n + 1 }, { uniqueKey: `check:${attemptId}:${n + 1}`, delayMs: Math.min(30 * 60_000, 15_000 * 2 ** Math.min(n, 7)) });
+  // Check every 15s at first, then at most every 5 minutes, for up to about 8 hours (networks can run hours behind).
+  if (n < 100) {
+    await enqueue('check_delivery', { attemptId, n: n + 1 }, { uniqueKey: `check:${attemptId}:${n + 1}`, delayMs: Math.min(5 * 60_000, 15_000 * 2 ** Math.min(n, 5)) });
   } else if (order.status === 'processing') {
     await tx(async (db) => {
       const o = (await one('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [order.id], db))!;
