@@ -1,0 +1,29 @@
+{
+  "name": "datacedi",
+  "version": "2.0.0",
+  "private": true,
+  "description": "DataCedi — airtime and data bundle platform for Ghana (API, website and admin dashboard)",
+  "type": "module",
+  "engines": { "node": ">=20.11" },
+  "scripts": {
+    "postinstall": "node build.mjs",
+    "build": "node build.mjs",
+    "start": "node dist/server/index.js",
+    "test": "node build.mjs --server-only && node --test --test-concurrency=1 tests/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.7",
+    "pg": "^8.16.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.3"
+  }
+}
