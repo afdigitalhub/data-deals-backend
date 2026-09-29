@@ -810,3 +810,14 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 @media (min-width: 1200px) {
   .hero-lady { -webkit-mask-image: radial-gradient(ellipse 62% 70% at 55% 58%, #000 52%, transparent 78%); mask-image: radial-gradient(ellipse 62% 70% at 55% 58%, #000 52%, transparent 78%); -webkit-mask-composite: source-over; mask-composite: add; }
 }
+
+/* Live phone number check */
+.phone-check { display: flex; align-items: flex-start; gap: 7px; min-height: 22px; margin-top: 7px; font-size: .84rem; font-weight: 600; line-height: 1.35; color: var(--muted); }
+.phone-check:empty { min-height: 0; margin-top: 0; }
+.phone-check-ic { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; margin-top: 1px; background: var(--line); color: var(--ink); }
+.phone-check.is-ok { color: var(--success); } .phone-check.is-ok .phone-check-ic { background: var(--success); color: #fff; }
+.phone-check.is-bad { color: var(--danger); } .phone-check.is-bad .phone-check-ic { background: var(--danger); color: #fff; }
+.phone-check.is-warn { color: var(--warn); } .phone-check.is-warn .phone-check-ic { background: var(--warn); color: #fff; }
+.input.phone-ok { border-color: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 16%, transparent); }
+.input.phone-bad { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }
+.input.phone-warn { border-color: var(--warn); }

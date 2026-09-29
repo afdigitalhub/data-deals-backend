@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { get } from '../lib/api';
 import { useApp, type Product } from '../lib/app-state';
-import { CATEGORY_LABEL, NETWORK_META, cedisToMinor, dataSize, ghs, guessNetwork, normalizePhone } from '../lib/format';
+import { CATEGORY_LABEL, NETWORK_META, cedisToMinor, dataSize, ghs, guessNetwork, normalizePhone, type Network } from '../lib/format';
 import { navigate } from '../lib/router';
 import { Alert, NetworkBadge, Spinner } from './ui';
 import { IcContacts, IcPhone, IcWifi } from './icons';
@@ -33,8 +33,29 @@ export function NetworkPicker({ value, onChange }: { value: string | null; onCha
   );
 }
 
-export function PhoneInput({ value, onChange, id = 'phone' }: { value: string; onChange: (v: string) => void; id?: string }) {
-  const { user } = useApp();
+/** Live check of a Ghana number while it is typed: format, length and which network the prefix belongs to. */
+export function phoneStatus(value: string, networks: Network[], selected?: string | null): { tone: 'ok' | 'warn' | 'bad' | 'wait'; text: string } | null {
+  const raw = value.replace(/[^\d+]/g, '');
+  if (!raw.replace('+', '')) return null;
+  const n = normalizePhone(raw);
+  if (n) {
+    const guess = guessNetwork(n, networks);
+    if (!guess) return { tone: 'bad', text: 'Invalid number: this is not an MTN, Telecel or AT number' };
+    const name = NETWORK_META[guess]?.name || guess;
+    if (selected && selected !== guess) return { tone: 'warn', text: `This looks like ${/^(MTN|AT)$/.test(guess) ? 'an' : 'a'} ${name} number, but you picked ${NETWORK_META[selected]?.name || selected}. Only continue if the number was moved (ported).` };
+    return { tone: 'ok', text: `Valid ${name} number` };
+  }
+  let d = raw.replace(/^\+/, '');
+  if (d.startsWith('233')) d = '0' + d.slice(3);
+  else if (/^[2-9]/.test(d)) d = '0' + d;
+  if (!/^0[2-5]?$/.test(d.slice(0, 2)) || (d.length >= 2 && !/^0[2-5]/.test(d))) return { tone: 'bad', text: 'Invalid number: Ghana mobile numbers start with 02 or 05' };
+  if (d.length < 10) { const left = 10 - d.length; return { tone: 'wait', text: `Keep typing… ${left} more digit${left === 1 ? '' : 's'}` }; }
+  return { tone: 'bad', text: 'Invalid number: Ghana numbers have 10 digits, e.g. 024 123 4567' };
+}
+
+export function PhoneInput({ value, onChange, id = 'phone', network }: { value: string; onChange: (v: string) => void; id?: string; network?: string | null }) {
+  const { user, config } = useApp();
+  const status = config ? phoneStatus(value, config.networks, network) : null;
   const [saved, setSaved] = useState<{ id: number; label: string; phone: string }[]>([]);
   const contactsSupported = typeof navigator !== 'undefined' && 'contacts' in navigator && 'select' in (navigator as any).contacts;
   useEffect(() => {
@@ -50,8 +71,11 @@ export function PhoneInput({ value, onChange, id = 'phone' }: { value: string; o
   return (
     <>
       <div className="input-group">
-        <input id={id} className="input" inputMode="tel" autoComplete="tel" placeholder="e.g. 0551234567" value={value} onChange={(e) => onChange(e.target.value)} maxLength={16} />
+        <input id={id} className={`input ${status ? `phone-${status.tone}` : ''}`} inputMode="tel" autoComplete="tel" placeholder="e.g. 0551234567" value={value} onChange={(e) => onChange(e.target.value)} maxLength={16} aria-describedby={`${id}-check`} aria-invalid={status?.tone === 'bad' || undefined} />
         {contactsSupported && <button type="button" className="icon-btn addon" onClick={pick} aria-label="Choose from contacts"><IcContacts /></button>}
+      </div>
+      <div id={`${id}-check`} className={`phone-check ${status ? `is-${status.tone}` : ''}`} aria-live="polite">
+        {status && <><span className="phone-check-ic" aria-hidden="true">{status.tone === 'ok' ? '✓' : status.tone === 'bad' ? '✕' : status.tone === 'warn' ? '!' : '…'}</span>{status.text}</>}
       </div>
       {saved.length > 0 && (
         <div className="amount-chips" aria-label="Saved numbers">
@@ -113,11 +137,8 @@ export function BuyWidget({ initialMode = 'data' }: { initialMode?: Mode }) {
       </div>
       <p className="step-label">1. Select network</p>
       <NetworkPicker value={network} onChange={(c) => { setNetwork(c); setManualNetwork(true); }} />
-      {suggested && network && suggested !== network && normalized && (
-        <p className="net-note">This number usually belongs to {NETWORK_META[suggested]?.name}. Keep {NETWORK_META[network]?.name} only if the number was moved (ported).</p>
-      )}
       <label className="step-label" htmlFor="buy-phone" style={{ display: 'block' }}>2. Enter phone number</label>
-      <div style={{ marginBottom: 16 }}><PhoneInput id="buy-phone" value={phone} onChange={setPhone} /></div>
+      <div style={{ marginBottom: 16 }}><PhoneInput id="buy-phone" value={phone} onChange={setPhone} network={network} /></div>
 
       {mode === 'data' ? (
         <>
