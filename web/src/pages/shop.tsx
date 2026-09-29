@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, type Product } from '../lib/app-state';
-import { validityText, CATEGORY_LABEL, NETWORK_META, dataSize, ghs, guessNetwork, normalizePhone } from '../lib/format';
+import { validityText, CATEGORY_LABEL, NETWORK_META, dataSize, ghs, normalizePhone } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
 import { SiteLayout } from '../components/layout';
 import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/BuyWidget';
@@ -193,13 +193,11 @@ function QuickBuy({ product, onClose }: { product: Product; onClose: () => void 
   const [phone, setPhone] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const n = normalizePhone(phone);
-  const guess = config && n ? guessNetwork(n, config.networks) : null;
   return (
     <Modal title={`${productLabel(product)} · ${NETWORK_META[product.network]?.name}`} onClose={onClose}>
       <p className="muted small" style={{ marginTop: 0 }}>Price {ghs((product.priceMinor || 0) + product.feeMinor)}. Enter the {NETWORK_META[product.network]?.name} number that should receive this bundle.</p>
       <label className="step-label" htmlFor="qb-phone" style={{ display: 'block' }}>Recipient phone number</label>
-      <PhoneInput id="qb-phone" value={phone} onChange={setPhone} />
-      {guess && guess !== product.network && <p className="net-note" style={{ marginTop: 8 }}>This number usually belongs to {NETWORK_META[guess]?.name}. Continue only if it was ported to {NETWORK_META[product.network]?.name}.</p>}
+      <PhoneInput id="qb-phone" value={phone} onChange={setPhone} network={product.network} />
       {err && <div style={{ marginTop: 10 }}><Alert>{err}</Alert></div>}
       <button className="btn btn-yellow btn-block btn-lg" style={{ marginTop: 16 }} onClick={() => { if (!n) return setErr('Enter a valid Ghana mobile number'); navigate(checkoutUrl({ productId: product.id, network: product.network, phone: n })); }}>Continue to checkout</button>
     </Modal>
