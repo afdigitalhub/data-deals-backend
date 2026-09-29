@@ -133,6 +133,20 @@ export function interpretDatamartPurchase(http: number, json: any): DeliveryResu
   return { outcome: 'pending', supplierReference: ref, costMinor, message: `DataMart accepted the order (status: ${status || 'processing'}). Confirm delivery in the DataMart dashboard.` };
 }
 
+/** Documented at api-doc "Order Status": GET /order-status/:reference → data.orderStatus
+ *  pending | waiting | processing | completed | failed | refunded */
+export function interpretDatamartStatus(http: number, json: any, ref: string | null): DeliveryResult {
+  if (http >= 500 || http === 0) return { outcome: 'unknown', supplierReference: ref, message: `DataMart status check failed (HTTP ${http})` };
+  if (http === 404) return { outcome: 'pending', supplierReference: ref, message: 'DataMart has not listed this order yet' };
+  if (http >= 400 || !json || json.status !== 'success' || !json.data) return { outcome: 'pending', supplierReference: ref, message: `DataMart status unclear (${(json && json.message) || `HTTP ${http}`})` };
+  const d = json.data;
+  const st = String(d.orderStatus || '').toLowerCase();
+  const sref = String(d.reference || ref || '') || null;
+  if (st === 'completed') return { outcome: 'success', supplierReference: sref, costMinor: toMinor(d.price), message: 'DataMart: delivered' };
+  if (st === 'failed' || st === 'refunded') return { outcome: 'failed', supplierReference: sref, message: `DataMart: order ${st}` };
+  return { outcome: 'pending', supplierReference: sref, message: `DataMart: ${st || 'processing'}` };
+}
+
 const datamart: SupplierAdapter = {
   code: 'datamart',
   automated: true,
@@ -158,6 +172,11 @@ const datamart: SupplierAdapter = {
       return { ok: true, message: bal == null ? 'Connected to DataMart (key accepted).' : `Connected to DataMart. Wallet balance: GHS ${(bal / 100).toFixed(2)}`, balanceMinor: bal };
     }
     return { ok: false, message: `DataMart replied unexpectedly: ${msg}` };
+  },
+  async checkStatus(req, supplierReference) {
+    const ref = supplierReference || `${config.datamart.refPrefix}${req.requestId}`;
+    const { http, json } = await dmCall('GET', `/order-status/${encodeURIComponent(ref)}`);
+    return interpretDatamartStatus(http, json, ref);
   },
   async deliver(req) {
     const network = DM_NETWORK[req.network];

@@ -324,7 +324,7 @@ export async function applyDeliveryResult(attemptId: number, result: DeliveryRes
     return { check: true, adapter: attempt.adapter };
   });
   if (followUp?.check && adapterFor(followUp.adapter)?.checkStatus) {
-    await enqueue('check_delivery', { attemptId, n: 1 }, { uniqueKey: `check:${attemptId}:1`, delayMs: 60_000 });
+    await enqueue('check_delivery', { attemptId, n: 1 }, { uniqueKey: `check:${attemptId}:1`, delayMs: 15_000 });
   }
 }
 
@@ -347,7 +347,7 @@ export async function checkDelivery(attemptId: number, n: number) {
   try { r = await adapter.checkStatus(deliveryRequest(order, product, a.request_id), a.supplier_reference); } catch (e) { r = { outcome: 'unknown', message: e instanceof Error ? e.message : 'status check failed' }; }
   if (r.outcome === 'success' || r.outcome === 'failed') return applyDeliveryResult(attemptId, r);
   if (n < 20) {
-    await enqueue('check_delivery', { attemptId, n: n + 1 }, { uniqueKey: `check:${attemptId}:${n + 1}`, delayMs: Math.min(30 * 60_000, 60_000 * 2 ** Math.min(n, 5)) });
+    await enqueue('check_delivery', { attemptId, n: n + 1 }, { uniqueKey: `check:${attemptId}:${n + 1}`, delayMs: Math.min(30 * 60_000, 15_000 * 2 ** Math.min(n, 7)) });
   } else if (order.status === 'processing') {
     await tx(async (db) => {
       const o = (await one('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [order.id], db))!;

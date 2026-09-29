@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 const calls = [];
 let mode = 'completed';
+let statusNow = 'processing';
 const fake = http.createServer((req, res) => {
   let body = '';
   req.on('data', (c) => (body += c));
@@ -13,6 +14,8 @@ const fake = http.createServer((req, res) => {
     const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
     if (req.headers['x-api-key'] !== 'dm-test-key') return send(401, { status: 'error', message: 'Invalid API key' });
     if (req.url === '/api/developer/balance') return send(200, { status: 'success', data: { balance: 77.5 } });
+    const st = req.url.match(/^\/api\/developer\/order-status\/(.+)$/);
+    if (st) return send(200, { status: 'success', data: { orderId: 'o1', reference: decodeURIComponent(st[1]), phoneNumber: '0241234564', network: 'YELLO', capacity: 2, price: 8.4, orderStatus: statusNow } });
     if (req.url !== '/api/developer/purchase') return send(404, { status: 'error', message: 'Not found' });
     if (mode === 'broke') return send(400, { status: 'error', message: 'Insufficient wallet balance', currentBalance: 10, requiredAmount: 23 });
     if (mode === 'boom') return send(502, { status: 'error', message: 'Bad gateway' });
@@ -77,6 +80,15 @@ test('DataMart: refusal = failed (safe to retry); server error = review, never r
   await payOrder(c.data.reference);
   await mod.jobs.drainJobs();
   assert.equal(await orderStatus(c.data.reference), 'processing', 'accepted but unconfirmed stays processing');
+  // automatic status checks: still processing -> check again later; completed -> delivered
+  await sql(`UPDATE jobs SET run_at = now() WHERE type = 'check_delivery'`);
+  await mod.jobs.drainJobs();
+  assert.equal(await orderStatus(c.data.reference), 'processing');
+  assert.ok(calls.some((x) => x.url.startsWith('/api/developer/order-status/')), 'status endpoint was called');
+  statusNow = 'completed';
+  await sql(`UPDATE jobs SET run_at = now() WHERE type = 'check_delivery' AND status = 'pending'`);
+  await mod.jobs.drainJobs();
+  assert.equal(await orderStatus(c.data.reference), 'successful', 'DataMart completed -> Delivered automatically');
   mode = 'completed';
 });
 
@@ -91,4 +103,8 @@ test('DataMart: products it cannot deliver fall back to manual without calling D
   assert.equal(calls.length, before);
   assert.equal(mod.adapters.datamartCapacity({ productCode: '5GB' }), '5');
   assert.equal(mod.adapters.datamartCapacity({ productCode: 'abc' }), null);
+  const i = mod.adapters.interpretDatamartStatus;
+  assert.equal(i(200, { status: 'success', data: { orderStatus: 'waiting' } }, 'x').outcome, 'pending');
+  assert.equal(i(200, { status: 'success', data: { orderStatus: 'refunded' } }, 'x').outcome, 'failed');
+  assert.equal(i(502, null, 'x').outcome, 'unknown');
 });
