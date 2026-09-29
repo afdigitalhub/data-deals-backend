@@ -690,3 +690,61 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .achat-compose { border-top: 1px solid var(--line); padding: 10px 12px; background: var(--surface); }
 .chat-link { font-weight: 800; text-decoration: underline; color: inherit; }
 @media (max-width: 640px) { .chat-fab { width: 56px; height: 56px; padding: 0; justify-content: center; } .chat-fab-label { display: none; } }
+
+/* ---------- Promo carousel (top of home page) ---------- */
+.promo-wrap { position: relative; z-index: 2; padding-top: 14px; }
+.promo-car { position: relative; min-width: 0; }
+.promo-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 22px; box-shadow: 0 14px 34px rgba(16,17,20,.22); overscroll-behavior-x: contain; }
+.promo-track::-webkit-scrollbar { display: none; }
+.promo-slide { all: unset; box-sizing: border-box; cursor: pointer; flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; min-height: 150px; padding: 18px 18px 20px 20px; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+.promo-slide:focus-visible { outline: 3px solid #101114; outline-offset: -3px; }
+.promo-glow { position: absolute; width: 260px; height: 260px; right: -70px; top: -90px; border-radius: 50%; pointer-events: none; opacity: .55; }
+.promo-copy { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex: 1; min-width: 0; }
+.promo-badge { font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; }
+.promo-title { font-size: clamp(1.28rem, 5.4vw, 1.9rem); font-weight: 800; line-height: 1.08; letter-spacing: -.02em; }
+.promo-title em { font-style: normal; }
+.promo-sub { font-size: .86rem; line-height: 1.35; opacity: .86; max-width: 34ch; }
+.promo-cta { margin-top: 4px; font-size: .84rem; font-weight: 800; border-radius: 999px; padding: 7px 14px; }
+.promo-art { position: relative; z-index: 1; flex-shrink: 0; width: 86px; height: 86px; border-radius: 26px; display: flex; align-items: center; justify-content: center; transform: rotate(-6deg); }
+.promo-art-big { font-size: 1.7rem; font-weight: 900; letter-spacing: -.04em; }
+.promo-art-ic { font-size: 2.5rem; line-height: 1; }
+/* Brand tones: black / orange / white / deep yellow. No network logos. */
+.tone-night { background: linear-gradient(125deg, #101114 0%, #24262C 100%); color: #fff; }
+.tone-night .promo-glow { background: radial-gradient(closest-side, rgba(255,212,0,.55), transparent); }
+.tone-night .promo-badge, .tone-night .promo-cta { background: #FFD400; color: #101114; }
+.tone-night .promo-title em { color: #FFD400; }
+.tone-night .promo-art { background: #FFD400; color: #101114; box-shadow: 0 10px 24px rgba(255,212,0,.3); }
+.tone-orange { background: linear-gradient(125deg, #F08A00 0%, #E06A00 100%); color: #fff; }
+.tone-orange .promo-glow { background: radial-gradient(closest-side, rgba(255,236,120,.7), transparent); }
+.tone-orange .promo-badge { background: rgba(255,255,255,.2); color: #fff; }
+.tone-orange .promo-cta { background: #101114; color: #FFD400; }
+.tone-orange .promo-title em { color: #101114; }
+.tone-orange .promo-art { background: #fff; box-shadow: 0 10px 24px rgba(16,17,20,.2); }
+.tone-light { background: linear-gradient(125deg, #FFFFFF 0%, #FFF6C7 100%); color: #101114; }
+.tone-light .promo-glow { background: radial-gradient(closest-side, rgba(255,212,0,.6), transparent); }
+.tone-light .promo-badge, .tone-light .promo-cta { background: #101114; color: #FFD400; }
+.tone-light .promo-title em { color: #E07A00; }
+.tone-light .promo-sub { color: #3A3D44; opacity: 1; }
+.tone-light .promo-art { background: #101114; }
+.tone-deep { background: linear-gradient(125deg, #FFE14D 0%, #F2BE00 100%); color: #101114; }
+.tone-deep .promo-glow { background: radial-gradient(closest-side, rgba(255,255,255,.8), transparent); }
+.tone-deep .promo-badge { background: rgba(16,17,20,.1); color: #101114; }
+.tone-deep .promo-cta { background: #101114; color: #FFD400; }
+.tone-deep .promo-title em { color: #B35A00; }
+.tone-deep .promo-sub { color: #26282D; opacity: 1; }
+.tone-deep .promo-art { background: #fff; box-shadow: 0 10px 24px rgba(16,17,20,.16); }
+.promo-dots { display: flex; justify-content: center; gap: 7px; margin-top: 10px; }
+.promo-dots button { all: unset; cursor: pointer; position: relative; overflow: hidden; width: 8px; height: 8px; border-radius: 999px; background: rgba(16,17,20,.25); transition: width .3s ease, background .3s ease; }
+.promo-dots button.on { width: 26px; background: rgba(16,17,20,.3); }
+.promo-dots button i { position: absolute; inset: 0; background: #101114; transform-origin: left; animation: promo-fill linear forwards; }
+.promo-dots button.on:not(:has(i)) { background: #101114; }
+@keyframes promo-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.promo-wrap + .hero-inner { padding-top: 18px; }
+@media (min-width: 900px) {
+  .promo-slide { min-height: 170px; padding: 24px 40px 24px 34px; }
+  .promo-art { width: 118px; height: 118px; border-radius: 32px; margin-right: 20px; }
+  .promo-art-big { font-size: 2.3rem; }
+  .promo-art-ic { font-size: 3.3rem; }
+  .promo-sub { font-size: .98rem; }
+}
+@media (prefers-reduced-motion: reduce) { .promo-dots button { transition: none; } }

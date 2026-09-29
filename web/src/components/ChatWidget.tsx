@@ -44,6 +44,7 @@ export function ChatWidget() {
   const autoOpened = useRef(false);
 
   useEffect(() => { if (search.get('chat') === 'open') setOpen(true); }, [search]);
+  useEffect(() => { const on = () => setOpen(true); window.addEventListener('dd-open-chat', on); return () => window.removeEventListener('dd-open-chat', on); }, []);
   useEffect(() => { lastId.current = 0; setMsgs([]); setData(null); }, [user?.id]);
 
   const refresh = useCallback(async (markRead: boolean) => {

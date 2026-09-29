@@ -7,6 +7,7 @@ import { BuyWidget, PhoneInput, checkoutUrl, productLabel } from '../components/
 import { Alert, Empty, Modal, NetworkBadge } from '../components/ui';
 import { twiGreeting, dailyTwiLine } from '../lib/greeting';
 import { HeroStage, HowToBuyDemo, Ticker } from '../components/HowToBuyDemo';
+import { PromoCarousel } from '../components/PromoCarousel';
 import { IcArrow, IcBolt, IcGlobe, IcHeadset, IcSearch, IcShield, IcTag, IcWifi } from '../components/icons';
 
 export function HomePage() {
@@ -19,6 +20,7 @@ export function HomePage() {
   return (
     <SiteLayout onYellow>
       <section className="hero">
+        <div className="container promo-wrap"><PromoCarousel /></div>
         <div className="container hero-inner">
           <div className="hero-copy">
             {user ? (
