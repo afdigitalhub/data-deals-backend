@@ -154,6 +154,19 @@ export function SettingsPage() {
           )}
         </>
       )} />
+      {s.notice && <SettingForm k="notice" title="Notice bar for customers" value={s.notice} canEdit={canEdit} onSaved={reload} render={(v, set) => (
+        <>
+          <p className="small muted" style={{ marginTop: 0 }}>Shows a message at the top of every page and at checkout. Customers can still buy. Use it when a network is slow.</p>
+          <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={v.enabled} onChange={(e) => set({ ...v, enabled: e.target.checked })} /><span><b>Show the notice bar</b></span></label>
+          <div className="amount-chips" style={{ marginBottom: 10 }}>
+            <button type="button" className="chip" onClick={() => set({ enabled: true, message: '⏳ MTN is having delays today. Your bundle will arrive, but it may take a few hours. Thank you for your patience! 🙏🏾' })}>MTN delay</button>
+            <button type="button" className="chip" onClick={() => set({ enabled: true, message: '⏳ Networks are slow right now. Your bundle will still arrive, it may just take a little longer. Thank you! 🙏🏾' })}>All networks slow</button>
+            <button type="button" className="chip" onClick={() => set({ enabled: true, message: '🎉 Deliveries are back to normal speed. Buy now! ⚡' })}>Back to normal</button>
+          </div>
+          <Field label="Message"><Textarea value={v.message} maxLength={240} onChange={(e) => set({ ...v, message: e.target.value })} style={{ minHeight: 70 }} /></Field>
+          <p className="tiny muted">Tap a button to fill the message, then press Save. Untick the box and Save to hide it.</p>
+        </>
+      )} />}
       <SettingForm k="maintenance" title="Maintenance mode" value={s.maintenance} canEdit={canEdit} onSaved={reload} render={(v, set) => (
         <>
           <label className="check" style={{ marginBottom: 12 }}><input type="checkbox" checked={v.enabled} onChange={(e) => set({ ...v, enabled: e.target.checked })} /><span><b>Pause all new purchases</b> (the website stays visible and existing orders keep processing)</span></label>

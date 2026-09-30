@@ -20,6 +20,7 @@ export const settingSchemas = {
     order_expiry_minutes: z.number().int().min(10).max(1440),
   }),
   maintenance: z.object({ enabled: z.boolean(), message: z.string().trim().max(300) }),
+  notice: z.object({ enabled: z.boolean(), message: z.string().trim().max(240) }),
   policies: z.object({ refund_window_days: z.number().int().min(0).max(90) }),
   notifications: z.object({ email_enabled: z.boolean(), sms_enabled: z.boolean(), admin_alert_email: optStr(254) }),
   push: z.object({

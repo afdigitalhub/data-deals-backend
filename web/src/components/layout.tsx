@@ -25,6 +25,7 @@ export function Header({ onYellow = false }: { onYellow?: boolean }) {
   return (
     <>
       {config?.maintenance.enabled && <div className="banner">{config.maintenance.message}</div>}
+      {config?.notice?.enabled && !config.maintenance.enabled && <div className="banner notice" role="status">{config.notice.message}</div>}
       {config?.payments.enabled && config.payments.testMode && <div className="banner test">Test mode — payments on this site are not real yet.</div>}
       <header className={`site-header ${onYellow && !open ? 'on-yellow' : ''}`}>
         <div className="container inner">

@@ -6,6 +6,7 @@ export interface User { id: number; email: string; fullName: string; phone: stri
 export interface PublicConfig {
   business: { name: string; tagline: string; supportEmail: string | null; supportPhone: string | null; whatsappNumber: string | null; address: string | null; showFounders: boolean; founders?: Array<{ name: string; title: string }> };
   maintenance: { enabled: boolean; message: string };
+  notice?: { enabled: boolean; message: string };
   networks: Network[];
   payments: { enabled: boolean; testMode: boolean };
   agentsEnabled: boolean;

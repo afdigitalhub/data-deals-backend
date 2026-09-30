@@ -122,6 +122,7 @@ export function CheckoutPage() {
             </div>
 
             {config?.maintenance.enabled && <Alert kind="warn">{config.maintenance.message}</Alert>}
+            {config?.notice?.enabled && !config.maintenance.enabled && <Alert kind="warn">{config.notice.message}</Alert>}
             {config && !config.payments.enabled && <Alert kind="info">Online payments are being switched on. You'll be able to pay very soon.</Alert>}
             {config?.payments.enabled && config.payments.testMode && <Alert kind="info">Test mode: no real money will be taken and nothing will be delivered.</Alert>}
             {error ? <Alert>{errMsg(error)}</Alert> : null}

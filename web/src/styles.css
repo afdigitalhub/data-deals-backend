@@ -273,6 +273,7 @@ p { margin: 0 0 1em; }
 /* ---------- Banners ---------- */
 .banner { background: var(--night); color: #fff; font-size: .88rem; padding: 9px 0; text-align: center; font-weight: 600; }
 .banner.test { background: #3F2A9E; }
+.banner.notice { background: #FFF1DC; color: #7A4100; border-bottom: 1px solid #F5D9A8; padding: 10px 16px; line-height: 1.4; }
 .promo { background: var(--yellow); border-radius: 20px; padding: 22px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 
 /* ---------- Account ---------- */

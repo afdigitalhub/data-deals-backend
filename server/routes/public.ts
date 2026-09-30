@@ -77,6 +77,7 @@ export function registerPublicRoutes(r: Router) {
     ctx.json(200, {
       business: { name: s.business.name, tagline: s.business.tagline, supportEmail: s.business.support_email, supportPhone: s.business.support_phone, whatsappNumber: s.business.whatsapp_number, address: s.business.address, showFounders: s.business.show_founders, founders: s.business.show_founders ? foundersOf(s.business) : [] },
       maintenance: s.maintenance,
+      notice: s.notice?.enabled && s.notice.message ? { enabled: true, message: s.notice.message } : { enabled: false, message: '' },
       networks,
       payments: { enabled: mode !== 'not_configured', testMode: mode !== 'live' },
       agentsEnabled: !!s.agents?.enabled,
