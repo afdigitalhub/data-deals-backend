@@ -21,7 +21,7 @@ const ALLOWED: Record<OrderStatus, OrderStatus[]> = {
   expired: ['paid'],
   paid: ['queued', 'processing', 'needs_review'],
   queued: ['processing', 'successful', 'failed', 'needs_review'],
-  processing: ['successful', 'failed', 'needs_review'],
+  processing: ['successful', 'failed', 'needs_review', 'queued'],
   needs_review: ['successful', 'failed'],
   failed: ['queued', 'successful', 'refund_pending'],
   refund_pending: ['refunded', 'failed'],
@@ -239,6 +239,8 @@ export async function confirmPayment(providerRef: string, source: 'webhook' | 'v
 }
 
 // ---------- Fulfilment ----------
+/** How many times an order waits for a supplier wallet top-up before it is marked failed (first 3 a minute apart, then every 5 minutes: about 8 hours). */
+const LOW_BALANCE_MAX_TRIES = 100;
 function deliveryRequest(order: any, product: any, requestId: string): DeliveryRequest {
   return { requestId, kind: order.kind, network: order.network_code, recipient: order.recipient_phone, productCode: product.supplier_product_code, faceValueMinor: order.face_value_minor, dataMb: product.data_mb ?? null };
 }
@@ -306,6 +308,12 @@ export async function applyDeliveryResult(attemptId: number, result: DeliveryRes
     }
     if (result.outcome === 'failed') {
       if (!['processing', 'needs_review', 'queued'].includes(order.status)) return null;
+      // Our wallet at the supplier is empty: nothing was sent. Hold the order and try again automatically after a top-up,
+      // instead of telling the customer it failed.
+      if (result.lowBalance && order.status === 'processing' && Number(attempt.attempt_no) < LOW_BALANCE_MAX_TRIES) {
+        await transition(db, order, 'queued', { type: 'system' }, 'delivery_delayed', `${attempt.supplier_name} wallet is empty. The order is waiting and will be sent automatically after a top-up (try ${attempt.attempt_no}).`);
+        return { lowBalance: true, orderId: Number(order.id), tryNo: Number(attempt.attempt_no), reference: order.reference as string, supplier: attempt.supplier_name as string };
+      }
       await transition(db, order, 'failed', actor, 'delivery_failed', `Supplier says the top-up was not delivered: ${result.message || 'no reason given'}`);
       await notify({ userId: order.user_id, email: order.contact_email, orderId: order.id, type: 'order_failed', title: `We couldn't deliver order ${order.reference}`, body: `Your ${order.product_snapshot?.name} to ${order.recipient_phone} could not be delivered. Our team will retry or refund you. Reference: ${order.reference}` }, db);
       alertAdmins('Delivery failed', `Order ${order.reference} failed at supplier: ${result.message}`);
@@ -323,7 +331,16 @@ export async function applyDeliveryResult(attemptId: number, result: DeliveryRes
     alertAdmins('Delivery needs review', `Order ${order.reference}: supplier outcome unknown.`);
     return { check: true, adapter: attempt.adapter };
   });
-  if (followUp?.check && adapterFor(followUp.adapter)?.checkStatus) {
+  const held = followUp as { lowBalance?: boolean; orderId: number; tryNo: number; reference: string; supplier: string } | null;
+  if (held?.lowBalance) {
+    // First retries come quickly (the owner may be topping up right now), then every 5 minutes for about 8 hours.
+    const delayMs = held.tryNo <= 3 ? 60_000 : 5 * 60_000;
+    await enqueue('fulfil', { orderId: held.orderId, retry: true }, { uniqueKey: `lowbal:${held.orderId}:${held.tryNo}`, delayMs });
+    alertAdmins(`${held.supplier} wallet is empty`, `Top up your ${held.supplier} wallet now. Order ${held.reference} is paid and waiting. It will be delivered automatically after you top up.`);
+    return;
+  }
+  const chk = followUp as { check?: boolean; adapter: string } | null;
+  if (chk?.check && adapterFor(chk.adapter)?.checkStatus) {
     await enqueue('check_delivery', { attemptId, n: 1 }, { uniqueKey: `check:${attemptId}:1`, delayMs: 15_000 });
   }
 }

@@ -63,9 +63,18 @@ test('DataMart: refusal = failed (safe to retry); server error = review, never r
   const a = await checkout(new Client(), product, { recipient_phone: '0241234561' });
   await payOrder(a.data.reference);
   await mod.jobs.drainJobs();
-  assert.equal(await orderStatus(a.data.reference), 'failed');
+  // Empty wallet: the order is held (not failed) and retried automatically once the wallet is topped up.
+  assert.equal(await orderStatus(a.data.reference), 'queued');
   const att = (await sql(`SELECT error_message FROM delivery_attempts a JOIN orders o ON o.id = a.order_id WHERE o.reference = $1`, [a.data.reference]))[0];
   assert.match(att.error_message, /Insufficient wallet balance/);
+  await sql(`UPDATE jobs SET run_at = now() WHERE type = 'fulfil' AND status = 'pending'`);
+  await mod.jobs.drainJobs();
+  assert.equal(await orderStatus(a.data.reference), 'queued', 'still empty -> still waiting');
+  mode = 'completed';
+  await sql(`UPDATE jobs SET run_at = now() WHERE type = 'fulfil' AND status = 'pending'`);
+  await mod.jobs.drainJobs();
+  assert.equal(await orderStatus(a.data.reference), 'successful', 'topped up -> delivered automatically');
+  assert.equal((await sql(`SELECT count(*)::int AS n FROM delivery_attempts a JOIN orders o ON o.id = a.order_id WHERE o.reference = $1`, [a.data.reference]))[0].n, 3);
 
   mode = 'boom';
   const b = await checkout(new Client(), product, { recipient_phone: '0241234562' });

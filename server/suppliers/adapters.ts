@@ -11,7 +11,9 @@ import { config } from '../config.js';
  *              Never retried automatically; goes to the admin investigation queue.
  */
 export type DeliveryOutcome = 'success' | 'pending' | 'failed' | 'unknown';
-export interface DeliveryResult { outcome: DeliveryOutcome; supplierReference?: string | null; message?: string; costMinor?: number | null; raw?: Record<string, unknown> }
+export interface DeliveryResult { outcome: DeliveryOutcome; supplierReference?: string | null; message?: string; costMinor?: number | null; raw?: Record<string, unknown>;
+  /** The supplier refused ONLY because our wallet there is empty. Nothing was sent, so it is safe to try again after a top-up. */
+  lowBalance?: boolean }
 export interface DeliveryRequest { requestId: string; kind: 'data' | 'airtime'; network: string; recipient: string; productCode: string | null; faceValueMinor: number | null; dataMb?: number | null }
 
 export interface SupplierAdapter {
@@ -119,7 +121,10 @@ export function interpretDatamartPurchase(http: number, json: any): DeliveryResu
   const code = json && typeof json.code === 'string' ? json.code : '';
   // Server errors, "already processing" and odd replies: the bundle MAY have gone through. Never guess.
   if (http >= 500 || http === 408 || http === 409 || code === 'REQUEST_IN_PROGRESS') return { outcome: 'unknown', message: `DataMart: ${msg}` };
-  if (http >= 400) return { outcome: 'failed', message: `DataMart refused the order (nothing was sent): ${msg}${code ? ` [${code}]` : ''}` };
+  if (http >= 400) {
+    const lowBalance = /insufficient[\s\w]*balance|low\s+balance|insufficient\s+funds/i.test(msg) || /INSUFFICIENT/i.test(code);
+    return { outcome: 'failed', lowBalance, message: `DataMart refused the order (nothing was sent): ${msg}${code ? ` [${code}]` : ''}` };
+  }
   if (!json || json.status !== 'success' || !json.data) {
     if (json && json.status === 'error') return { outcome: 'failed', message: `DataMart refused the order: ${msg}` };
     return { outcome: 'unknown', message: `DataMart gave an unexpected reply (${msg})` };
