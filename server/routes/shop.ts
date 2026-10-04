@@ -99,6 +99,7 @@ export function registerShopRoutes(r: Router) {
       const p = byId.get(i.productId);
       if (!p || p.status === 'draft') throw conflict('An item in your bag is no longer available. Please remove it and try again.', 'item_gone');
       if (p.status === 'sold_out') throw conflict(`${p.name} is sold out. Please remove it from your bag.`, 'sold_out');
+      if (Number(p.price_minor) <= 0) throw conflict(`${p.name} has no price on the site yet. Please ask us about it on WhatsApp.`, 'price_on_request');
       if (p.sizes.length && !p.sizes.includes(i.size)) throw new HttpError(400, `Choose a size for ${p.name}`, 'size_required');
       if (p.colours.length && !p.colours.includes(i.colour)) throw new HttpError(400, `Choose a colour for ${p.name}`, 'colour_required');
       return { productId: Number(p.id), name: p.name, slug: p.slug, size: p.sizes.length ? i.size : '', colour: p.colours.length ? i.colour : '', qty: i.qty, priceMinor: Number(p.price_minor) };

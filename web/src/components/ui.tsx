@@ -50,7 +50,7 @@ export function Wordmark({ light = false }: { light?: boolean }) {
 export function Price({ p, large = false }: { p: { priceMinor: number; compareAtMinor: number | null }; large?: boolean }) {
   return (
     <span className={`price ${large ? 'price-lg' : ''}`}>
-      <span>{ghs(p.priceMinor)}</span>
+      <span>{p.priceMinor > 0 ? ghs(p.priceMinor) : 'Ask for price'}</span>
       {p.compareAtMinor ? <s aria-label={`Was ${ghs(p.compareAtMinor)}`}>{ghs(p.compareAtMinor)}</s> : null}
     </span>
   );
@@ -69,7 +69,7 @@ export function ProductCard({ p }: { p: Product }) {
         {p.soldOut ? <span className="flag">Sold out</span> : p.compareAtMinor ? <span className="flag flag-gold">Reduced</span> : p.featured ? <span className="flag flag-gold">Featured</span> : null}
       </div>
       <div className="pcard-name">{p.name}</div>
-      <div className="pcard-foot"><Price p={p} /><span className="pcard-go" aria-hidden="true"><IcBag width={18} height={18} /></span></div>
+      <div className="pcard-foot"><Price p={p} /><span className="pcard-go" aria-hidden="true">{p.priceMinor > 0 ? <IcBag width={18} height={18} /> : <IcWhatsApp width={18} height={18} />}</span></div>
     </Link>
   );
 }

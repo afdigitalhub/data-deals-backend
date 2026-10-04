@@ -1,5 +1,6 @@
 import { config, assertProductionConfig } from './config.js';
 import { migrate } from './db/migrate.js';
+import { seedOnce } from './seed.js';
 import { pool } from './db/pool.js';
 import { createApp } from './app.js';
 import { log } from './lib/log.js';
@@ -11,6 +12,7 @@ async function main() {
     process.exit(1);
   }
   await migrate();
+  await seedOnce();
   const server = createApp();
   server.keepAliveTimeout = 65_000;
   server.headersTimeout = 66_000;

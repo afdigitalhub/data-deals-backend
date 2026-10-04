@@ -48,7 +48,7 @@ export function ItemPage({ slug }: { slug: string }) {
   const goTo = (i: number) => { setShot(i); const el = rail.current; if (el) el.scrollTo({ left: el.clientWidth * i, behavior: 'smooth' }); };
   const onScroll = () => { const el = rail.current; if (el && el.clientWidth) setShot(Math.round(el.scrollLeft / el.clientWidth)); };
   const detail = [size && `size ${size}`, colour].filter(Boolean).join(', ');
-  const ask = s ? waLink(s.whatsappIntl, `Hello ${s.name}, is this available? ${p.name}${detail ? ` (${detail})` : ''} - ${ghs(p.priceMinor)}\n${location.origin}/item/${p.slug}`) : '#';
+  const ask = s ? waLink(s.whatsappIntl, `Hello ${s.name}, is this available? ${p.name}${detail ? ` (${detail})` : ''}${p.priceMinor > 0 ? ` - ${ghs(p.priceMinor)}` : '. How much is it?'}\n${location.origin}/item/${p.slug}`) : '#';
 
   return (
     <>
@@ -86,7 +86,7 @@ export function ItemPage({ slug }: { slug: string }) {
             </fieldset>
           )}
 
-          {!p.soldOut && (
+          {!p.soldOut && p.priceMinor > 0 && (
             <div className="buy">
               <div className="qty" role="group" aria-label="Quantity">
                 <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="One less"><IcMinus /></button>
@@ -98,7 +98,9 @@ export function ItemPage({ slug }: { slug: string }) {
           )}
           {need && <Notice>{need}</Notice>}
           {added && <Notice kind="ok">Added to your bag. <Link to="/bag">View bag</Link></Notice>}
-          <a className="btn btn-line-dark btn-wide" href={ask} target="_blank" rel="noopener"><IcWhatsApp />Ask about this on WhatsApp</a>
+          {p.priceMinor > 0
+            ? <a className="btn btn-line-dark btn-wide" href={ask} target="_blank" rel="noopener"><IcWhatsApp />Ask about this on WhatsApp</a>
+            : <a className="btn btn-gold btn-wide ask-price" href={ask} target="_blank" rel="noopener"><IcWhatsApp />Ask for the price on WhatsApp</a>}
 
           {p.description && <div className="desc">{p.description.split(/\n+/).map((t, i) => <p key={i}>{t}</p>)}</div>}
           <p className="fine">{s?.deliveryNote}</p>

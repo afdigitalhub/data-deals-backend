@@ -30,13 +30,18 @@ const cedis = z.union([z.number(), z.string()]).transform((v, c) => {
   if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) { c.addIssue({ code: 'custom', message: 'Enter a price in cedis, e.g. 250' }); return z.NEVER; }
   return Math.round(n * 100);
 });
+const cedisOrZero = z.union([z.number(), z.string()]).transform((v, c) => {
+  const n = typeof v === 'number' ? v : Number(String(v).replace(/[^\d.]/g, ''));
+  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) { c.addIssue({ code: 'custom', message: 'Enter a price in cedis, e.g. 250. Put 0 to show Ask for price.' }); return z.NEVER; }
+  return Math.round(n * 100);
+});
 const optionList = z.array(z.string().trim().min(1).max(30)).max(30).transform((a) => [...new Set(a)]);
 
 const productInput = z.object({
   name: z.string().trim().min(2, 'Give the item a name').max(120),
   category_id: z.number().int().positive().nullable(),
   description: z.string().trim().max(2000).default(''),
-  price: cedis,
+  price: cedisOrZero,
   compare_at: cedis.nullable().optional(),
   sizes: optionList.default([]),
   colours: optionList.default([]),

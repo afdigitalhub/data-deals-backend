@@ -132,7 +132,7 @@ function Items() {
               <Link to={`/admin/items/${p.id}`} className="adm-thumb">{p.images[0] ? <img src={p.images[0].url} alt="" /> : <PhotoBlank name={p.name} />}</Link>
               <div className="adm-li-main">
                 <Link to={`/admin/items/${p.id}`} className="adm-li-name">{p.name}</Link>
-                <span className="adm-li-meta">{ghs(p.priceMinor)}{p.categoryName ? `, ${p.categoryName}` : ''}{p.images.length === 0 ? ', no photo yet' : ''}</span>
+                <span className="adm-li-meta">{p.priceMinor > 0 ? ghs(p.priceMinor) : 'No price yet'}{p.categoryName ? `, ${p.categoryName}` : ''}{p.images.length === 0 ? ', no photo yet' : ''}</span>
               </div>
               <select value={p.status} disabled={busy === p.id} onChange={(e) => setStatus(p, e.target.value)} aria-label={`Status of ${p.name}`} className={`st st-${p.status}`}>
                 {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -236,7 +236,7 @@ function ItemEditor({ id }: { id: number | null }) {
 
       <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required maxLength={120} placeholder="For example: Pink wrap dress" /></Field>
       <div className="two">
-        <Field label="Price (GH₵)"><input value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} inputMode="decimal" required placeholder="250" /></Field>
+        <Field label="Price (GH₵)" hint="Put 0 to show 'Ask for price'."><input value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} inputMode="decimal" required placeholder="250" /></Field>
         <Field label="Old price (optional)" hint="Shows crossed out, to mark a reduction."><input value={f.compare_at} onChange={(e) => setF({ ...f, compare_at: e.target.value })} inputMode="decimal" placeholder="300" /></Field>
       </div>
       <Field label="Category">
