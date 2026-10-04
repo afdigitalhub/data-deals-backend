@@ -27,7 +27,7 @@ export const IcTag = (p: P) => <S {...p}><path d="M4 4h7.500l8.500 8.500-7.500 7
 export function CatIcon({ slug }: { slug: string }) {
   if (/sneak|shoe|slide|sandal|boot|heel/.test(slug)) return <IcShoe />;
   if (/women|ladies|lady|dress|girl/.test(slug)) return <IcDress />;
-  if (/men|shirt|top|boy|outfit|wear/.test(slug)) return <IcShirt />;
+  if (/^men|shirt|top|boy|outfit|wear/.test(slug)) return <IcShirt />;
   if (/bag|purse/.test(slug)) return <IcBag />;
   return <IcTag />;
 }

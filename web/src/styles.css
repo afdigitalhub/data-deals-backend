@@ -98,7 +98,7 @@ p { margin: 0; }
 /* Hero */
 .hero { position: relative; overflow: hidden; background: radial-gradient(90% 120% at 100% 0%, rgba(214,174,96,.26), transparent 62%), radial-gradient(70% 90% at 0% 100%, rgba(107,77,44,.35), transparent 70%), #0E0B09; border-bottom: 1px solid var(--edge); }
 .hero-bg { position: absolute; inset: 0 0 0 auto; width: 70%; height: 100%; object-fit: cover; object-position: center top; }
-@media (min-width: 960px) { .hero-bg { left: auto; right: 0; width: 46%; object-position: center top; } .hero.has-photo::after { background: linear-gradient(90deg, #0E0B09 54%, rgba(14,11,9,.55) 68%, rgba(14,11,9,.05) 100%) !important; } }
+@media (min-width: 960px) { .hero-bg { left: auto; right: 0; width: 46%; object-position: center 30%; } .hero.has-photo::after { background: linear-gradient(90deg, #0E0B09 54%, rgba(14,11,9,.55) 68%, rgba(14,11,9,.05) 100%) !important; } }
 .hero.has-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8,6,5,.95) 0%, rgba(8,6,5,.86) 55%, rgba(8,6,5,.55) 100%); }
 .hero-in { position: relative; z-index: 2; max-width: 1240px; margin: 0 auto; padding: 44px var(--pad) 34px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; }
 .hero h1 { margin-top: 14px; font-size: clamp(2.9rem, 14vw, 5.4rem); font-weight: 800; letter-spacing: -.01em; line-height: .96; text-transform: uppercase; color: #fff; }

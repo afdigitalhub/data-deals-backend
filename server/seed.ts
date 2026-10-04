@@ -8,7 +8,7 @@ import { log } from './lib/log.js';
  * Each batch runs once (guarded by a settings marker), so items the owner later edits or deletes never come back.
  * Prices were not supplied, so each item is stored with price 0 ("ask for price") until the owner sets one.
  */
-type Batch = { marker: string; dir: string; items: Array<[file: string, name: string, slug: string, category: string]> };
+type Batch = { marker: string; dir: string; categories?: Array<[name: string, slug: string, sort: number]>; items: Array<[file: string, name: string, slug: string, category: string]> };
 const BATCHES: Batch[] = [
   { marker: 'import_womens_outfits_1', dir: 'women', items: [
     ['w1.jpg', 'Pink blazer dress with white lapel', 'pink-blazer-dress-white-lapel', 'womens-outfits'],
@@ -26,6 +26,13 @@ const BATCHES: Batch[] = [
     ['m2.jpg', 'White long-sleeve shirt with printed sleeves', 'white-long-sleeve-shirt-printed-sleeves', 'mens-outfits'],
     ['m1.jpg', 'Black and white tie-dye shirt with green stripe', 'black-white-tie-dye-shirt-green-stripe', 'mens-outfits'],
   ] },
+  { marker: 'import_batch_3', dir: 'batch3', categories: [["Men's shoes", 'mens-shoes', 1]], items: [
+    ['a.jpg', 'Black patent and suede lace-up shoes', 'black-patent-suede-lace-up-shoes', 'mens-shoes'],
+    ['d.jpg', 'Black suede loafers with gold buckle', 'black-suede-loafers-gold-buckle', 'mens-shoes'],
+    ['e.jpg', 'Black suede chunky loafers with chain', 'black-suede-chunky-loafers-chain', 'mens-shoes'],
+    ['b.jpg', 'Black velvet loafers with silver spade', 'black-velvet-loafers-silver-spade', 'mens-shoes'],
+    ['c.jpg', 'Pink button-front dress with white collar', 'pink-button-front-dress-white-collar', 'womens-outfits'],
+  ] },
 ];
 
 export async function seedOnce(): Promise<void> {
@@ -40,6 +47,9 @@ async function importBatch(batch: Batch): Promise<void> {
     await client.query('SELECT pg_advisory_xact_lock(727274002)');
     const done = await client.query('SELECT 1 FROM settings WHERE key = $1', [MARKER]);
     if (done.rows.length) { await client.query('COMMIT'); return; }
+    for (const [name, slug, sort] of batch.categories || []) {
+      await client.query('INSERT INTO categories (name, slug, sort_order) VALUES ($1,$2,$3) ON CONFLICT (slug) DO NOTHING', [name, slug, sort]);
+    }
     let n = 0;
     // Inserted last-to-first so the first item in the list is the newest and shows first.
     for (const [file, name, slug, catSlug] of [...batch.items].reverse()) {
