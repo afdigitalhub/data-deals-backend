@@ -8,7 +8,7 @@ import { log } from './lib/log.js';
  * Each batch runs once (guarded by a settings marker), so items the owner later edits or deletes never come back.
  * Prices were not supplied, so each item is stored with price 0 ("ask for price") until the owner sets one.
  */
-type Batch = { marker: string; dir: string; categories?: Array<[name: string, slug: string, sort: number]>; replace?: Array<[slug: string, files: string]>; items: Array<[file: string, name: string, slug: string, category: string]> };
+type Batch = { marker: string; dir: string; categories?: Array<[name: string, slug: string, sort: number]>; replace?: Array<[slug: string, files: string]>; items: Array<[file: string, name: string, slug: string, category: string, colours?: string[]]> };
 const BATCHES: Batch[] = [
   { marker: 'import_womens_outfits_1', dir: 'women', items: [
     ['w1.jpg', 'Pink blazer dress with white lapel', 'pink-blazer-dress-white-lapel', 'womens-outfits'],
@@ -59,6 +59,23 @@ const BATCHES: Batch[] = [
       ['shorts.jpg|shorts-2.jpg', 'Dark green belted shorts', 'dark-green-belted-shorts', 'womens-outfits'],
       ['bodysuit.jpg|bodysuit-2.jpg', 'Beige sleeveless bodysuit', 'beige-sleeveless-bodysuit', 'womens-outfits'],
     ] },
+  { marker: 'import_batch_5', dir: 'batch5', items: [
+    ['puffer-black.jpg|puffer-cream.jpg|puffer-taupe.jpg', 'Puffer vest with knit sleeves', 'puffer-vest-knit-sleeves', 'mens-outfits', ['Black', 'Cream', 'Taupe']],
+    ['track-brown.jpg|track-olive.jpg', 'Oversized hoodie and joggers set', 'oversized-hoodie-joggers-set', 'mens-outfits', ['Brown', 'Olive']],
+    ['atee-black.jpg|atee-white.jpg|atee-black-2.jpg|atee-white-2.jpg', 'Oversized letter-print T-shirt', 'oversized-letter-print-t-shirt', 'mens-outfits', ['Black', 'White']],
+    ['hoodie-yellow.jpg|hoodie-grey.jpg', 'Cross-print zip hoodie', 'cross-print-zip-hoodie', 'mens-outfits', ['Yellow', 'Grey']],
+    ['camojacket.jpg', 'Camo jacket with tan collar', 'camo-jacket-tan-collar', 'mens-outfits'],
+    ['handtee.jpg|handtee-2.jpg', 'White T-shirt with hand and heart prints', 'white-t-shirt-hand-heart-prints', 'mens-outfits'],
+    ['joggers.jpg', 'Leopard side-panel joggers', 'leopard-side-panel-joggers', 'mens-outfits', ['Black', 'Grey']],
+    ['shirt-script.jpg', 'White short-sleeve shirt with chest pockets', 'white-short-sleeve-shirt-chest-pockets', 'mens-outfits'],
+    ['camotee.jpg|camotee-2.jpg', 'Camo sleeveless graphic T-shirt', 'camo-sleeveless-graphic-t-shirt', 'mens-outfits'],
+    ['shorts.jpg', 'Brown denim shorts', 'brown-denim-shorts', 'mens-outfits'],
+    ['shirt-heart.jpg', 'White long-sleeve shirt with red heart', 'white-long-sleeve-shirt-red-heart', 'mens-outfits'],
+    ['whiteleopard.jpg', 'White trousers with leopard side panel', 'white-trousers-leopard-side-panel', 'mens-outfits'],
+    ['greytee.jpg', 'Grey sleeveless T-shirt', 'grey-sleeveless-t-shirt', 'mens-outfits'],
+    ['capedress.jpg', 'Off-shoulder cape dress', 'off-shoulder-cape-dress', 'womens-outfits', ['Blue', 'Red', 'Brown', 'Black']],
+    ['asymtop.jpg', 'Asymmetric sleeveless top', 'asymmetric-sleeveless-top', 'womens-outfits', ['Yellow', 'Green', 'Black', 'Wine', 'White', 'Brown', 'Cream']],
+  ] },
 ];
 
 export async function seedOnce(): Promise<void> {
@@ -78,7 +95,7 @@ async function importBatch(batch: Batch): Promise<void> {
     }
     let n = 0;
     // Inserted last-to-first so the first item in the list is the newest and shows first.
-    for (const [file, name, slug, catSlug] of [...batch.items].reverse()) {
+    for (const [file, name, slug, catSlug, colours] of [...batch.items].reverse()) {
       const cat = await client.query('SELECT id FROM categories WHERE slug = $1', [catSlug]);
       const catId = cat.rows[0]?.id ?? null;
       let photos: Buffer[];
@@ -87,7 +104,7 @@ async function importBatch(batch: Batch): Promise<void> {
       if (exists.rows.length) continue;
       const p = await client.query(
         `INSERT INTO products (name, slug, category_id, description, price_minor, sizes, colours, status, is_featured, created_at)
-         VALUES ($1,$2,$3,'',0,'{}','{}','live',false, now() + ($4 || ' milliseconds')::interval) RETURNING id`, [name, slug, catId, String(n)]);
+         VALUES ($1,$2,$3,'',0,'{}',$5,'live',false, now() + ($4 || ' milliseconds')::interval) RETURNING id`, [name, slug, catId, String(n), colours || []]);
       for (let i = 0; i < photos.length; i++) await client.query(`INSERT INTO product_images (product_id, position, mime, bytes) VALUES ($1, $2, 'image/jpeg', $3)`, [p.rows[0].id, i, photos[i]]);
       n++;
     }
