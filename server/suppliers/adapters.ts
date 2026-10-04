@@ -139,7 +139,7 @@ export function interpretDatamartPurchase(http: number, json: any): DeliveryResu
 }
 
 /** Documented at api-doc "Order Status": GET /order-status/:reference → data.orderStatus
- *  pending | waiting | processing | completed | failed | refunded */
+ *  pending | waiting | processing | completed | failed | refunded | cancelled */
 export function interpretDatamartStatus(http: number, json: any, ref: string | null): DeliveryResult {
   if (http >= 500 || http === 0) return { outcome: 'unknown', supplierReference: ref, message: `DataMart status check failed (HTTP ${http})` };
   if (http === 404) return { outcome: 'pending', supplierReference: ref, message: 'DataMart has not listed this order yet' };
@@ -148,7 +148,7 @@ export function interpretDatamartStatus(http: number, json: any, ref: string | n
   const st = String(d.orderStatus || '').toLowerCase();
   const sref = String(d.reference || ref || '') || null;
   if (st === 'completed') return { outcome: 'success', supplierReference: sref, costMinor: toMinor(d.price), message: 'DataMart: delivered' };
-  if (st === 'failed' || st === 'refunded') return { outcome: 'failed', supplierReference: sref, message: `DataMart: order ${st}` };
+  if (st === 'failed' || st === 'refunded' || st === 'cancelled' || st === 'canceled') return { outcome: 'failed', supplierReference: sref, message: `DataMart: order ${st}` };
   return { outcome: 'pending', supplierReference: sref, message: `DataMart: ${st || 'processing'}` };
 }
 
