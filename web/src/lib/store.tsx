@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { get, safeStorage } from './api';
 
-export interface Category { name: string; slug: string; count: number }
+export interface Category { name: string; slug: string; count: number; image?: string | null }
 export interface Store { name: string; tagline: string; whatsapp: string; whatsappIntl: string; phones: string[]; location: string; deliveryNote: string; about: string }
 export interface Config { store: Store; categories: Category[]; productCount: number }
 export interface Product {

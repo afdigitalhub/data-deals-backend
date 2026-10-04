@@ -51,12 +51,13 @@ export function registerShopRoutes(r: Router) {
 
   r.get('/api/config', async (ctx) => {
     const s = await getStore();
-    const categories = await q(`SELECT c.name, c.slug, (SELECT count(*)::int FROM products p WHERE p.category_id = c.id AND p.status IN ('live','sold_out')) AS count
+    const categories = await q(`SELECT c.name, c.slug, (SELECT count(*)::int FROM products p WHERE p.category_id = c.id AND p.status IN ('live','sold_out')) AS count,
+      (SELECT i.id FROM product_images i JOIN products p ON p.id = i.product_id WHERE p.category_id = c.id AND p.status IN ('live','sold_out') ORDER BY p.is_featured DESC, p.created_at DESC, i.position, i.id LIMIT 1) AS image_id
       FROM categories c WHERE c.is_active ORDER BY c.sort_order, c.id`);
     const total = await one<{ n: number }>(`SELECT count(*)::int AS n FROM products WHERE status IN ('live','sold_out')`);
     ctx.json(200, {
       store: { name: s.name, tagline: s.tagline, whatsapp: s.whatsapp, whatsappIntl: waNumber(s.whatsapp), phones: s.phones, location: s.location, deliveryNote: s.delivery_note, about: s.about },
-      categories, productCount: total!.n,
+      categories: categories.map((c: any) => ({ name: c.name, slug: c.slug, count: c.count, image: c.image_id ? `/media/${c.image_id}` : null })), productCount: total!.n,
     }, { 'Cache-Control': 'public, max-age=20' });
   });
 

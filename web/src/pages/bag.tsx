@@ -49,7 +49,7 @@ export function BagPage() {
               <li key={l.key}>
                 <Link to={`/item/${l.slug}`} className="bag-photo">{l.image ? <img src={l.image} alt="" /> : <PhotoBlank name={l.name} />}</Link>
                 <div className="bag-main">
-                  <Link to={`/item/${l.slug}`} className="bag-name">{l.name}</Link>
+                  <div className="bag-top"><Link to={`/item/${l.slug}`} className="bag-name">{l.name}</Link><span className="bag-price">{ghs(l.priceMinor * l.qty)}</span></div>
                   <span className="bag-meta">{[l.size && `Size ${l.size}`, l.colour].filter(Boolean).join(', ')}</span>
                   <div className="bag-row">
                     <div className="qty qty-sm" role="group" aria-label={`Quantity of ${l.name}`}>
@@ -60,7 +60,6 @@ export function BagPage() {
                     <button type="button" className="link-btn" onClick={() => remove(l.key)}><IcTrash width={16} height={16} />Remove</button>
                   </div>
                 </div>
-                <span className="bag-price">{ghs(l.priceMinor * l.qty)}</span>
               </li>
             ))}
           </ul>

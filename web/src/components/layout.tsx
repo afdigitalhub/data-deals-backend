@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from '../lib/router';
 import { useShop } from '../lib/store';
 import { prettyPhone } from '../lib/format';
-import { IcBag, IcClose, IcMenu, IcPhone, IcPin, IcWhatsApp, Wordmark } from './ui';
+import { IcBag, IcClose, IcMenu, IcPhone, IcPin, IcSearch, IcTruck, IcWhatsApp, Wordmark } from './ui';
 
 export function waLink(intl: string, text: string) { return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`; }
 
@@ -17,16 +17,21 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="site">
       <a href="#main" className="skip">Skip to content</a>
+      <div className="strap"><IcTruck width={17} height={17} /><span>Delivery across Ghana. Order on WhatsApp, pay after we confirm.</span></div>
       <header className="top">
         <div className="top-in">
-          <button className="icon-btn menu-btn" onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open}><IcMenu /></button>
+          <button className="hbtn menu-btn" onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open}><IcMenu /></button>
           <Wordmark light />
           <nav className="top-nav" aria-label="Shop sections">
-            <Link to="/shop" className={path === '/shop' ? 'on' : ''}>Everything</Link>
+            <Link to="/" className={path === '/' ? 'on' : ''}>Home</Link>
+            <Link to="/shop" className={path === '/shop' ? 'on' : ''}>Shop</Link>
             {cats.map((c) => <Link key={c.slug} to={`/shop/${c.slug}`} className={path === `/shop/${c.slug}` ? 'on' : ''}>{c.name}</Link>)}
             <Link to="/delivery" className={path === '/delivery' ? 'on' : ''}>Delivery</Link>
           </nav>
-          <Link to="/bag" className="bag-link" aria-label={`Bag, ${bagCount} item${bagCount === 1 ? '' : 's'}`}><IcBag />{bagCount > 0 && <span className="bag-count">{bagCount}</span>}</Link>
+          <div className="top-tools">
+            <Link to="/shop" className="hbtn" aria-label="Search the shop"><IcSearch /></Link>
+            <Link to="/bag" className="hbtn" aria-label={`Bag, ${bagCount} item${bagCount === 1 ? '' : 's'}`}><IcBag />{bagCount > 0 && <span className="bag-count">{bagCount}</span>}</Link>
+          </div>
         </div>
       </header>
 
@@ -34,7 +39,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="drawer" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="drawer-scrim" onClick={() => setOpen(false)} />
           <div className="drawer-panel">
-            <div className="drawer-head"><Wordmark light /><button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close menu"><IcClose /></button></div>
+            <div className="drawer-head"><Wordmark light /><button className="hbtn" onClick={() => setOpen(false)} aria-label="Close menu"><IcClose /></button></div>
             <nav className="drawer-nav">
               <Link to="/shop">Everything</Link>
               {cats.map((c) => <Link key={c.slug} to={`/shop/${c.slug}`}>{c.name}<span>{c.count}</span></Link>)}
