@@ -1,7 +1,7 @@
 import { type ReactNode, type SVGProps } from 'react';
 import { Link } from '../lib/router';
 import { ghs } from '../lib/format';
-import type { Product } from '../lib/store';
+import { useShop, type Product } from '../lib/store';
 import { ApiError } from '../lib/api';
 
 type P = SVGProps<SVGSVGElement>;
@@ -34,6 +34,11 @@ export function CatIcon({ slug }: { slug: string }) {
 export const IcTruck = (p: P) => <S {...p}><path d="M2.500 6h11v10h-11zM13.500 9.500h4l3 3.500v3h-7" /><circle cx="7" cy="17.500" r="1.800" /><circle cx="17" cy="17.500" r="1.800" /></S>;
 export const IcWallet = (p: P) => <S {...p}><rect x="3" y="6" width="18" height="13" rx="2.500" /><path d="M3 10h18M15.500 14.500h2" /></S>;
 export const IcArrow = (p: P) => <S {...p}><path d="M5 12h14M13 6l6 6-6 6" /></S>;
+export const IcHeart = ({ filled, ...p }: P & { filled?: boolean }) => <S {...p} fill={filled ? 'currentColor' : 'none'}><path d="M12 20s-7.500-4.600-7.500-10.200A4.300 4.300 0 0 1 12 7.400a4.300 4.300 0 0 1 7.500 2.400C19.500 15.400 12 20 12 20Z" /></S>;
+export const IcUser = (p: P) => <S {...p}><circle cx="12" cy="8.500" r="3.700" /><path d="M4.500 20c1.200-3.600 4-5.400 7.500-5.400s6.300 1.800 7.500 5.400" /></S>;
+export const IcCheck = (p: P) => <S {...p}><path d="m5 12.500 4.500 4.500L19 7.500" /></S>;
+export const IcRuler = (p: P) => <S {...p}><path d="M3.500 15.500 15.500 3.500l5 5-12 12-5-5Z" /><path d="m7.500 11.500 2 2M10.500 8.500l2 2M13.500 5.500l2 2" /></S>;
+export const IcGift = (p: P) => <S {...p}><path d="M4 11h16v9H4zM3 7.500h18V11H3zM12 7.500V20M12 7.500c-1.500-3.500-5.500-3.500-5.500-1.200 0 1.200 2 1.200 5.500 1.200Zm0 0c1.500-3.500 5.500-3.500 5.500-1.200 0 1.200-2 1.200-5.500 1.200Z" /></S>;
 export const IcWhatsApp = (p: P) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" {...p}><path d="M12 2a10 10 0 0 0-8.600 15.100L2 22l5-1.300A10 10 0 1 0 12 2Zm5.300 14.100c-.200.600-1.300 1.200-1.800 1.200-.500.100-1 .200-3.300-.700-2.800-1.100-4.500-3.900-4.700-4.100-.100-.200-1.100-1.500-1.100-2.900s.700-2 1-2.300c.200-.300.500-.300.700-.300h.500c.200 0 .400 0 .600.500l.800 2c.100.200.100.400 0 .500l-.400.600-.300.300c-.100.200-.300.300-.100.600.100.300.700 1.100 1.400 1.800 1 .900 1.800 1.100 2 1.300.300.100.400.100.600-.100l.800-1c.200-.300.400-.200.600-.100l1.900.900c.300.100.500.200.500.300.100.100.100.600-.100 1.200Z" /></svg>
 );
@@ -61,16 +66,61 @@ export function PhotoBlank({ name }: { name: string }) {
   return <div className="photo-blank" aria-hidden="true"><span>{name.trim().slice(0, 1).toUpperCase()}</span></div>;
 }
 
+const SWATCH: Record<string, string> = {
+  black: '#111', white: '#f7f7f5', cream: '#efe6d2', beige: '#dfcfb4', taupe: '#9c8f80', brown: '#6b4428', olive: '#7b7a35', yellow: '#e3b21c', grey: '#9a9a9a', gray: '#9a9a9a',
+  blue: '#2046c9', navy: '#1b2550', red: '#d2301f', green: '#1f5a36', wine: '#6a1526', pink: '#e58aa6', orange: '#d9661f', purple: '#6a3d9a', gold: '#c9a24a', silver: '#c8c8c8',
+};
+export const swatch = (name: string) => SWATCH[name.trim().toLowerCase()] || null;
+
+/** Small colour dots for a card. Unknown colour names are counted in words rather than guessed at. */
+export function ColourDots({ colours }: { colours: string[] }) {
+  if (colours.length < 2) return null;
+  const known = colours.map((c) => ({ c, hex: swatch(c) }));
+  if (known.some((k) => !k.hex)) return <span className="dots-text">{colours.length} colours</span>;
+  return <span className="dots" aria-label={`${colours.length} colours: ${colours.join(', ')}`}>{known.slice(0, 5).map((k) => <i key={k.c} style={{ background: k.hex! }} />)}{colours.length > 5 ? <em>+{colours.length - 5}</em> : null}</span>;
+}
+
+const BADGE: Record<string, string> = { limited: 'Limited', bestseller: 'Bestseller', trending: 'Trending' };
+/** One badge per card, the most useful one. Each comes from the item's real state, never from decoration. */
+export function badgeFor(p: Product): { text: string; gold: boolean } | null {
+  if (p.soldOut) return { text: 'Sold out', gold: false };
+  if (p.compareAtMinor) return { text: 'Sale', gold: true };
+  for (const k of ['limited', 'bestseller', 'trending']) if (p.badges?.includes(k)) return { text: BADGE[k], gold: true };
+  if (p.isNew) return { text: 'New', gold: false };
+  return null;
+}
+
+export function SaveButton({ p, className = '' }: { p: { id: number; name: string }; className?: string }) {
+  const { isSaved, toggleSaved } = useShop();
+  const on = isSaved(p.id);
+  return <button type="button" className={`save ${on ? 'on' : ''} ${className}`} aria-pressed={on} aria-label={on ? `Remove ${p.name} from saved items` : `Save ${p.name}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSaved(p); }}><IcHeart filled={on} width={19} height={19} /></button>;
+}
+
 export function ProductCard({ p }: { p: Product }) {
+  const { add, say, openQuick } = useShop();
+  const badge = badgeFor(p);
+  const needsChoice = p.sizes.length > 1 || p.colours.length > 1;
+  const quick = () => {
+    if (needsChoice) { openQuick(p); return; }
+    add(p, p.sizes[0] || '', p.colours[0] || '', 1);
+    say(`${p.name} is in your bag`, '/bag', 'View bag');
+  };
   return (
-    <Link to={`/item/${p.slug}`} className={`pcard ${p.soldOut ? 'is-out' : ''}`}>
-      <div className="pcard-photo">
-        {p.image ? <img src={p.image} alt={p.name} loading="lazy" decoding="async" /> : <PhotoBlank name={p.name} />}
-        {p.soldOut ? <span className="flag">Sold out</span> : p.compareAtMinor ? <span className="flag flag-gold">Reduced</span> : p.featured ? <span className="flag flag-gold">Featured</span> : null}
+    <article className={`pcard ${p.soldOut ? 'is-out' : ''}`}>
+      <Link to={`/item/${p.slug}`} className="pcard-link">
+        <div className={`pcard-photo ${p.thumb2 ? 'has-two' : ''}`}>
+          {p.thumb ? <img src={p.thumb} alt={p.name} loading="lazy" decoding="async" /> : <PhotoBlank name={p.name} />}
+          {p.thumb2 ? <img className="alt" src={p.thumb2} alt="" loading="lazy" decoding="async" /> : null}
+          {badge ? <span className={`flag ${badge.gold ? 'flag-gold' : ''}`}>{badge.text}</span> : null}
+        </div>
+        <div className="pcard-name">{p.name}</div>
+      </Link>
+      <SaveButton p={p} className="pcard-save" />
+      <div className="pcard-foot">
+        <span className="pcard-meta"><Price p={p} /><ColourDots colours={p.colours} /></span>
+        {!p.soldOut && <button type="button" className="pcard-go" onClick={quick} aria-label={needsChoice ? `Choose options for ${p.name}` : `Add ${p.name} to bag`}><IcPlus width={18} height={18} /></button>}
       </div>
-      <div className="pcard-name">{p.name}</div>
-      <div className="pcard-foot"><Price p={p} /><span className="pcard-go" aria-hidden="true">{p.priceMinor > 0 ? <IcBag width={18} height={18} /> : <IcWhatsApp width={18} height={18} />}</span></div>
-    </Link>
+    </article>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { get } from '../lib/api';
 import { Link, usePageTitle } from '../lib/router';
-import { useShop, type Product } from '../lib/store';
+import { useShop, type Collection, type Product } from '../lib/store';
 import { plural } from '../lib/format';
 import { waLink } from '../components/layout';
 import { CatIcon, IcArrow, IcSearch, IcShield, IcTruck, IcWallet, IcWhatsApp, Loading, Notice, ProductCard, errMsg } from '../components/ui';
@@ -31,20 +31,44 @@ export function EmptyShelf({ title, body }: { title: string; body: string }) {
   );
 }
 
+/** "Continue exploring": items this visitor opened recently, remembered on their phone. Loads only when there is something to show. */
+export function ContinueExploring({ exclude }: { exclude?: number }) {
+  const { recent } = useShop();
+  const ids = recent.filter((id) => id !== exclude).slice(0, 8);
+  const key = ids.join(',');
+  const [items, setItems] = useState<Product[]>([]);
+  useEffect(() => {
+    if (!key) { setItems([]); return; }
+    let off = false;
+    get<{ products: Product[] }>(`/api/products?ids=${key}`).then((r) => { if (!off) setItems(r.products); }).catch(() => {});
+    return () => { off = true; };
+  }, [key]);
+  if (items.length < 2) return null;
+  return (
+    <section className="band">
+      <div className="wrap">
+        <div className="band-head"><h2>Continue exploring</h2><Link to="/my-space/recent" className="more">See all</Link></div>
+        <div className="rail-row">{items.map((p) => <ProductCard key={p.id} p={p} />)}</div>
+      </div>
+    </section>
+  );
+}
+
+interface HomeData { newDrops: Product[]; edit: (Collection & { products: Product[] }) | null }
+
 export function HomePage() {
   const { config } = useShop();
   usePageTitle('Pmsomel Enterprise | Sneakers, outfits and accessories in Ghana');
-  const { data, error } = useProducts('?limit=24');
+  const [data, setData] = useState<HomeData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { let off = false; get<HomeData>('/api/home').then((r) => { if (!off) setData(r); }).catch((e) => { if (!off) setError(errMsg(e)); }); return () => { off = true; }; }, []);
   const s = config?.store;
   const cats = config?.categories || [];
-  const [tab, setTab] = useState('');
+  const vibes = (config?.collections || []).filter((k) => k.kind === 'vibe');
   const [pick, setPick] = useState(0);
-  const withPhoto = (data || []).filter((p) => p.image).slice(0, 3);
+  const withPhoto = (data?.newDrops || []).filter((p) => p.image).slice(0, 3);
   const lead = withPhoto[Math.min(pick, withPhoto.length - 1)] || null;
-  const shown = (data || []).filter((p) => !tab || p.category?.slug === tab).slice(0, 10);
-  const tabs = cats.filter((c) => (data || []).some((p) => p.category?.slug === c.slug));
-  const promos = cats.slice(0, 2);
-  const promoLine = (slug: string) => (/sneak|shoe/.test(slug) ? 'Clean pairs for every day' : /bag|access/.test(slug) ? 'The finishing touches' : 'Fresh styles for every vibe');
+  const edit = data?.edit || null;
   return (
     <>
       <section className={`hero ${lead ? 'has-photo' : ''}`}>
@@ -66,14 +90,61 @@ export function HomePage() {
           </div>
           {withPhoto.length > 1 && (
             <div className="hero-picks">
-              {withPhoto.map((p, i) => <button key={p.id} className={p.id === lead?.id ? 'on' : ''} onClick={() => setPick(i)} aria-label={`Show ${p.name}`}><img src={p.image!} alt="" /></button>)}
+              {withPhoto.map((p, i) => <button key={p.id} className={p.id === lead?.id ? 'on' : ''} onClick={() => setPick(i)} aria-label={`Show ${p.name}`}><img src={p.thumb || p.image!} alt="" /></button>)}
             </div>
           )}
         </div>
         {lead && <Link to={`/item/${lead.slug}`} className="hero-link">{lead.name}<IcArrow width={16} height={16} /></Link>}
       </section>
 
+      {vibes.length > 0 && (
+        <section className="band">
+          <div className="wrap">
+            <div className="band-head"><h2>Shop by vibe</h2><span className="band-note">Pick a mood, see the pieces</span></div>
+            <div className="vibes">
+              {vibes.map((k) => (
+                <Link key={k.slug} to={`/vibe/${k.slug}`} className="vibe">
+                  {k.thumb ? <img src={k.thumb} alt="" loading="lazy" decoding="async" /> : null}
+                  <span className="vibe-copy"><b>{k.name}</b><span>{k.tagline}</span><em>{plural(k.count, 'piece')}</em></span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="band">
+        <div className="wrap">
+          <div className="band-head"><h2>New drops</h2>{data && data.newDrops.length > 0 && <Link to="/shop" className="more">See everything</Link>}</div>
+          {error ? <Notice>{error}</Notice> : !data ? <Loading text="Loading the latest pieces" /> : data.newDrops.length === 0
+            ? <EmptyShelf title="The first pieces are on their way" body="We're adding our sneakers and outfits to the site. Until then, message us and we'll send you photos and prices of what's in stock." />
+            : <div className="grid grid-5">{data.newDrops.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
+        </div>
+      </section>
+
+      {edit && edit.products.length > 0 && (
+        <section className="edit">
+          <div className="wrap edit-in">
+            <Link to={`/item/${edit.products[0].slug}`} className="edit-lead">
+              {edit.products[0].image ? <img src={edit.products[0].image} alt={edit.products[0].name} loading="lazy" decoding="async" /> : null}
+            </Link>
+            <div className="edit-copy">
+              <div className="kicker">The Edit</div>
+              <h2>{edit.name}</h2>
+              {edit.body ? <p>{edit.body}</p> : null}
+              <ol className="edit-list">
+                {edit.products.slice(0, 5).map((p) => (
+                  <li key={p.id}><Link to={`/item/${p.slug}`}><span className="edit-thumb">{p.thumb ? <img src={p.thumb} alt="" loading="lazy" /> : null}</span><span>{p.name}</span><IcArrow width={16} height={16} /></Link></li>
+                ))}
+              </ol>
+              <Link to={`/edit/${edit.slug}`} className="btn btn-line">See the whole edit<IcArrow width={18} height={18} /></Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="catbar">
+        <div className="wrap"><div className="band-head"><h2>Shop by category</h2></div></div>
         <div className="catbar-row">
           {cats.map((c) => (
             <Link key={c.slug} to={`/shop/${c.slug}`} className="cat">
@@ -85,49 +156,63 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="band">
-        <div className="wrap">
-          <div className="band-head">
-            <h2>Featured products</h2>
-            {tabs.length > 1 && (
-              <div className="pills" role="group" aria-label="Filter featured products">
-                <button className={!tab ? 'on' : ''} onClick={() => setTab('')}>All</button>
-                {tabs.map((c) => <button key={c.slug} className={tab === c.slug ? 'on' : ''} onClick={() => setTab(c.slug)}>{c.name}</button>)}
-              </div>
-            )}
-          </div>
-          {error ? <Notice>{error}</Notice> : !data ? <Loading text="Loading the latest pieces" /> : data.length === 0
-            ? <EmptyShelf title="The first pieces are on their way" body="We're adding our sneakers and outfits to the site. Until then, message us and we'll send you photos and prices of what's in stock." />
-            : <div className="grid grid-5">{shown.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
-        </div>
-      </section>
-
-      {promos.length === 2 && (
-        <section className="band">
-          <div className="wrap promos">
-            {promos.map((c, i) => (
-              <Link key={c.slug} to={`/shop/${c.slug}`} className={`promo ${i === 0 ? 'promo-light' : ''}`}>
-                {c.image && <img src={c.image} alt="" loading="lazy" />}
-                <span className="promo-copy">
-                  <span className="kicker">{c.count > 0 ? 'In the shop now' : 'Coming soon'}</span>
-                  <b>{c.name}</b>
-                  <span>{promoLine(c.slug)}</span>
-                  <span className="promo-btn">{i === 0 ? 'Shop' : 'Explore'} {c.name.toLowerCase()}<IcArrow width={16} height={16} /></span>
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <ContinueExploring />
 
       <section className="trust">
         <div className="wrap trust-row">
           <div><IcTruck /><span><b>Delivery</b>Across Ghana</span></div>
           <div><IcWallet /><span><b>Pay after we confirm</b>Nothing charged on the site</span></div>
           <div><IcWhatsApp width={24} height={24} /><span><b>WhatsApp support</b>Chat with us anytime</span></div>
-          <div><IcShield /><span><b>Size help</b>Ask before you order</span></div>
+          <div><IcShield /><span><b>Track your order</b><Link to="/track">Check an order number</Link></span></div>
         </div>
       </section>
+    </>
+  );
+}
+
+/** A "Shop by vibe" collection or an edit: a short introduction, then the pieces the owner chose for it. */
+export function CollectionPage({ slug, kind }: { slug: string; kind: 'vibe' | 'edit' }) {
+  const [data, setData] = useState<{ collection: Collection; products: Product[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { config } = useShop();
+  useEffect(() => {
+    let off = false; setData(null); setError(null);
+    get<{ collection: Collection; products: Product[] }>(`/api/collections/${encodeURIComponent(slug)}`).then((r) => { if (!off) setData(r); }).catch((e) => { if (!off) setError(errMsg(e)); });
+    return () => { off = true; };
+  }, [slug]);
+  usePageTitle(data?.collection.name || 'Collection');
+  if (error) return <section className="band"><div className="wrap"><Notice>{error}</Notice><p style={{ marginTop: 16 }}><Link to="/shop" className="btn btn-dark">Shop everything</Link></p></div></section>;
+  if (!data) return <section className="band"><div className="wrap"><Loading /></div></section>;
+  const k = data.collection;
+  const others = (config?.collections || []).filter((c) => c.kind === 'vibe' && c.slug !== k.slug);
+  return (
+    <>
+      <section className="chead">
+        {k.image ? <img src={k.image} alt="" /> : null}
+        <div className="wrap chead-in">
+          <nav className="trail" aria-label="Breadcrumb"><Link to="/">Home</Link><span>{kind === 'edit' ? 'The Edit' : 'Shop by vibe'}</span></nav>
+          <h1>{k.name}</h1>
+          <p>{k.body || k.tagline}</p>
+          <span className="count">{plural(data.products.length, 'piece')}</span>
+        </div>
+      </section>
+      <section className="band">
+        <div className="wrap">
+          {data.products.length === 0
+            ? <EmptyShelf title="Nothing here yet" body="We're still choosing pieces for this collection. Message us and we'll send you what's in stock." />
+            : <div className="grid">{data.products.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
+        </div>
+      </section>
+      {others.length > 0 && (
+        <section className="band">
+          <div className="wrap">
+            <div className="band-head"><h2>Try another vibe</h2></div>
+            <div className="vibes">
+              {others.map((c) => <Link key={c.slug} to={`/vibe/${c.slug}`} className="vibe">{c.thumb ? <img src={c.thumb} alt="" loading="lazy" /> : null}<span className="vibe-copy"><b>{c.name}</b><span>{c.tagline}</span><em>{plural(c.count, 'piece')}</em></span></Link>)}
+            </div>
+          </div>
+        </section>
+      )}
     </>
   );
 }
@@ -179,8 +264,10 @@ export function DeliveryPage() {
         <p>{s?.deliveryNote || 'We deliver across Ghana. The delivery fee depends on your location and is confirmed on WhatsApp before you pay.'}</p>
         <h2>How to order</h2>
         <p>Add what you want to your bag, fill in your name and delivery location, and tap "Send order on WhatsApp". We reply to confirm that your size is in stock, the delivery fee and how to pay.</p>
-        <h2>Sizes and exchanges</h2>
-        <p>Not sure about a size? Message us before you order and we'll help you choose. If something arrives and doesn't fit, tell us the same day and we'll sort out an exchange where the item is unworn.</p>
+        <h2>Sizes</h2>
+        <p>Not sure about a size? Message us before you order and we'll help you choose.</p>
+        <h2>Track your order</h2>
+        <p>After you send an order you get an order number. <Link to="/track">Check where your order is</Link> at any time.</p>
         {s?.about ? <><h2>About {s.name}</h2><p>{s.about}</p></> : null}
         <h2>Reach us</h2>
         {s && (

@@ -2,12 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from '../lib/router';
 import { useShop } from '../lib/store';
 import { prettyPhone } from '../lib/format';
-import { IcBag, IcClose, IcMenu, IcPhone, IcPin, IcSearch, IcTruck, IcWhatsApp, Wordmark } from './ui';
+import { IcBag, IcClose, IcHeart, IcMenu, IcPhone, IcPin, IcSearch, IcTruck, IcUser, IcWhatsApp, Wordmark } from './ui';
+import { QuickAdd, Toast } from './quickadd';
 
 export function waLink(intl: string, text: string) { return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`; }
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { config, bagCount } = useShop();
+  const { config, bagCount, saved } = useShop();
   const { path } = useLocation();
   const [open, setOpen] = useState(false);
   useEffect(() => { setOpen(false); }, [path]);
@@ -24,12 +25,14 @@ export function Layout({ children }: { children: ReactNode }) {
           <Wordmark light />
           <nav className="top-nav" aria-label="Shop sections">
             <Link to="/" className={path === '/' ? 'on' : ''}>Home</Link>
-            <Link to="/shop" className={path === '/shop' ? 'on' : ''}>Shop</Link>
-            {cats.map((c) => <Link key={c.slug} to={`/shop/${c.slug}`} className={path === `/shop/${c.slug}` ? 'on' : ''}>{c.name}</Link>)}
-            <Link to="/delivery" className={path === '/delivery' ? 'on' : ''}>Delivery</Link>
+            <Link to="/shop" className={path.startsWith('/shop') ? 'on' : ''}>Shop</Link>
+            {(config?.collections || []).filter((k) => k.kind === 'vibe').map((k) => <Link key={k.slug} to={`/vibe/${k.slug}`} className={path === `/vibe/${k.slug}` ? 'on' : ''}>{k.name}</Link>)}
+            <Link to="/track" className={path === '/track' ? 'on' : ''}>Track order</Link>
           </nav>
           <div className="top-tools">
-            <Link to="/shop" className="hbtn" aria-label="Search the shop"><IcSearch /></Link>
+            <Link to="/shop" className="hbtn hide-sm" aria-label="Search the shop"><IcSearch /></Link>
+            <Link to="/my-space" className="hbtn hide-sm" aria-label="My space"><IcUser /></Link>
+            <Link to="/my-space/saved" className="hbtn" aria-label={`Saved items, ${saved.length}`}><IcHeart />{saved.length > 0 && <span className="bag-count">{saved.length}</span>}</Link>
             <Link to="/bag" className="hbtn" aria-label={`Bag, ${bagCount} item${bagCount === 1 ? '' : 's'}`}><IcBag />{bagCount > 0 && <span className="bag-count">{bagCount}</span>}</Link>
           </div>
         </div>
@@ -43,6 +46,9 @@ export function Layout({ children }: { children: ReactNode }) {
             <nav className="drawer-nav">
               <Link to="/shop">Everything</Link>
               {cats.map((c) => <Link key={c.slug} to={`/shop/${c.slug}`}>{c.name}<span>{c.count}</span></Link>)}
+              {(config?.collections || []).filter((k) => k.kind === 'vibe').map((k) => <Link key={k.slug} to={`/vibe/${k.slug}`} className="sub">{k.name}</Link>)}
+              <Link to="/my-space">My space</Link>
+              <Link to="/track">Track an order</Link>
               <Link to="/delivery">Delivery and contact</Link>
             </nav>
             {s && <a className="btn btn-gold" href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question.`)} target="_blank" rel="noopener"><IcWhatsApp />Chat on WhatsApp</a>}
@@ -50,7 +56,9 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <main id="main">{children}</main>
+      <main id="main" key={path}>{children}</main>
+      <QuickAdd />
+      <Toast />
 
       <footer className="foot">
         <div className="foot-in">
@@ -69,6 +77,8 @@ export function Layout({ children }: { children: ReactNode }) {
             {s && <a href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question.`)} target="_blank" rel="noopener"><IcWhatsApp width={16} height={16} />WhatsApp</a>}
             {s?.location ? <span><IcPin width={16} height={16} />{s.location}</span> : null}
             <Link to="/delivery">How delivery works</Link>
+            <Link to="/track">Track an order</Link>
+            <Link to="/my-space">My space</Link>
           </div>
         </div>
         <div className="foot-base"><span>© {new Date().getFullYear()} {s?.name || 'Pmsomel Enterprise'}</span><Link to="/admin">Staff</Link></div>

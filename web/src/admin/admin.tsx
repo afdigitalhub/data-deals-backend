@@ -5,8 +5,9 @@ import { dateTime, ghs, prettyPhone } from '../lib/format';
 import { Field, IcPlus, IcTrash, Loading, Notice, PhotoBlank, Wordmark, errMsg } from '../components/ui';
 
 interface Me { id: number; email: string; fullName: string; role: string }
-interface Img { id: number; url: string }
-interface AProduct { id: number; slug: string; name: string; categoryId: number | null; categoryName: string | null; description: string; priceMinor: number; compareAtMinor: number | null; sizes: string[]; colours: string[]; status: 'draft' | 'live' | 'sold_out'; isFeatured: boolean; images: Img[] }
+interface Img { id: number; url: string; thumb?: string }
+interface AProduct { id: number; slug: string; name: string; categoryId: number | null; categoryName: string | null; description: string; priceMinor: number; compareAtMinor: number | null; sizes: string[]; colours: string[]; status: 'draft' | 'live' | 'sold_out'; isFeatured: boolean; badges: string[]; pairsWith: number[]; images: Img[] }
+interface ACollection { id: number; kind: 'vibe' | 'edit'; name: string; slug: string; tagline: string; body: string; is_active: boolean; sort_order: number; product_ids: number[] }
 interface ACategory { id: number; name: string; slug: string; sort_order: number; is_active: boolean; count: number }
 const STATUS: Record<string, string> = { draft: 'Hidden', live: 'On sale', sold_out: 'Sold out' };
 
@@ -24,27 +25,32 @@ function useLoad<T>(path: string | null) {
 }
 
 /** Shrinks a phone photo in the browser before upload, so pages stay fast and uploads work on slow networks. */
-async function shrink(file: File): Promise<string> {
+async function shrink(file: File): Promise<{ data: string; thumb: string }> {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('That file is not a photo we can open.')); i.src = url; });
-    const max = 1400;
-    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
-    const g = c.getContext('2d')!;
-    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-    g.drawImage(img, 0, 0, c.width, c.height);
+    const draw = (max: number) => {
+      const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      return c;
+    };
+    // A small copy for the shop's cards, so pages open fast on slow networks.
+    const thumb = draw(640).toDataURL('image/jpeg', 0.72);
+    const c = draw(1400);
     for (const quality of [0.84, 0.74, 0.62, 0.5]) {
       const data = c.toDataURL('image/jpeg', quality);
-      if (data.length < 1_700_000) return data;
+      if (data.length < 1_700_000) return { data, thumb };
     }
     throw new Error('That photo is too large even after shrinking. Try another one.');
   } finally { URL.revokeObjectURL(url); }
 }
 
 function Shell({ me, tab, children, onLogout }: { me: Me; tab: string; children: ReactNode; onLogout: () => void }) {
-  const tabs: [string, string][] = [['items', 'Items'], ['orders', 'Orders'], ['categories', 'Categories'], ['details', 'Shop details']];
+  const tabs: [string, string][] = [['items', 'Items'], ['orders', 'Orders'], ['collections', 'Collections'], ['categories', 'Categories'], ['details', 'Shop details']];
   return (
     <div className="adm">
       <header className="adm-top">
@@ -129,7 +135,7 @@ function Items() {
         <ul className="adm-list">
           {data.products.map((p) => (
             <li key={p.id}>
-              <Link to={`/admin/items/${p.id}`} className="adm-thumb">{p.images[0] ? <img src={p.images[0].url} alt="" /> : <PhotoBlank name={p.name} />}</Link>
+              <Link to={`/admin/items/${p.id}`} className="adm-thumb">{p.images[0] ? <img src={p.images[0].thumb || p.images[0].url} alt="" loading="lazy" /> : <PhotoBlank name={p.name} />}</Link>
               <div className="adm-li-main">
                 <Link to={`/admin/items/${p.id}`} className="adm-li-name">{p.name}</Link>
                 <span className="adm-li-meta">{p.priceMinor > 0 ? ghs(p.priceMinor) : 'No price yet'}{p.categoryName ? `, ${p.categoryName}` : ''}{p.images.length === 0 ? ', no photo yet' : ''}</span>
@@ -161,16 +167,17 @@ function ListInput({ label, hint, value, onChange, placeholder }: { label: strin
 function ItemEditor({ id }: { id: number | null }) {
   const cats = useLoad<{ categories: ACategory[] }>('/api/admin/categories');
   const existing = useLoad<{ product: AProduct }>(id ? `/api/admin/products/${id}` : null);
-  const [f, setF] = useState({ name: '', category_id: null as number | null, description: '', price: '', compare_at: '', sizes: [] as string[], colours: [] as string[], status: 'live' as AProduct['status'], is_featured: false });
+  const [f, setF] = useState({ name: '', category_id: null as number | null, description: '', price: '', compare_at: '', sizes: [] as string[], colours: [] as string[], status: 'live' as AProduct['status'], is_featured: false, badges: [] as string[], pairs_with: [] as number[] });
+  const all = useLoad<{ products: AProduct[] }>('/api/admin/products');
   const [images, setImages] = useState<Img[]>([]);
-  const [queued, setQueued] = useState<{ data: string; key: string }[]>([]);
+  const [queued, setQueued] = useState<{ data: string; thumb: string; key: string }[]>([]);
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null); const [saved, setSaved] = useState(false);
   const [upBusy, setUpBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const p = existing.data?.product; if (!p) return;
-    setF({ name: p.name, category_id: p.categoryId, description: p.description, price: String(p.priceMinor / 100), compare_at: p.compareAtMinor ? String(p.compareAtMinor / 100) : '', sizes: p.sizes, colours: p.colours, status: p.status, is_featured: p.isFeatured });
+    setF({ name: p.name, category_id: p.categoryId, description: p.description, price: String(p.priceMinor / 100), compare_at: p.compareAtMinor ? String(p.compareAtMinor / 100) : '', sizes: p.sizes, colours: p.colours, status: p.status, is_featured: p.isFeatured, badges: p.badges || [], pairs_with: p.pairsWith || [] });
     setImages(p.images);
   }, [existing.data]);
 
@@ -179,9 +186,9 @@ function ItemEditor({ id }: { id: number | null }) {
     setUpBusy(true); setError(null);
     try {
       for (const file of Array.from(files).slice(0, 8)) {
-        const data = await shrink(file);
-        if (id) { const r = await post<{ image: Img }>(`/api/admin/products/${id}/images`, { data }); setImages((a) => [...a, r.image]); }
-        else setQueued((a) => [...a, { data, key: `${Date.now()}-${Math.random()}` }]);
+        const { data, thumb } = await shrink(file);
+        if (id) { const r = await post<{ image: Img }>(`/api/admin/products/${id}/images`, { data, thumb }); setImages((a) => [...a, r.image]); }
+        else setQueued((a) => [...a, { data, thumb, key: `${Date.now()}-${Math.random()}` }]);
       }
     } catch (e) { setError(errMsg(e)); } finally { setUpBusy(false); if (fileRef.current) fileRef.current.value = ''; }
   };
@@ -193,12 +200,12 @@ function ItemEditor({ id }: { id: number | null }) {
 
   const save = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true); setError(null); setSaved(false);
-    const body = { name: f.name, category_id: f.category_id, description: f.description, price: f.price, compare_at: f.compare_at ? f.compare_at : null, sizes: f.sizes, colours: f.colours, status: f.status, is_featured: f.is_featured };
+    const body = { name: f.name, category_id: f.category_id, description: f.description, price: f.price, compare_at: f.compare_at ? f.compare_at : null, sizes: f.sizes, colours: f.colours, status: f.status, is_featured: f.is_featured, badges: f.badges, pairs_with: f.pairs_with };
     try {
       if (id) { await put(`/api/admin/products/${id}`, body); setSaved(true); }
       else {
         const r = await post<{ product: AProduct }>('/api/admin/products', body);
-        for (const qd of queued) await post(`/api/admin/products/${r.product.id}/images`, { data: qd.data });
+        for (const qd of queued) await post(`/api/admin/products/${r.product.id}/images`, { data: qd.data, thumb: qd.thumb });
         navigate('/admin/items');
       }
     } catch (x) { setError(errMsg(x)); } finally { setBusy(false); }
@@ -257,6 +264,28 @@ function ItemEditor({ id }: { id: number | null }) {
       </Field>
       <label className="check"><input type="checkbox" checked={f.is_featured} onChange={(e) => setF({ ...f, is_featured: e.target.checked })} /><span>Show this first in the shop</span></label>
 
+      <div className="field">
+        <span className="field-label">Badge on the photo</span>
+        <div className="checks">
+          {([['bestseller', 'Bestseller'], ['trending', 'Trending'], ['limited', 'Limited']] as const).map(([k, label]) => (
+            <label key={k} className="check"><input type="checkbox" checked={f.badges.includes(k)} onChange={(e) => setF({ ...f, badges: e.target.checked ? [...f.badges, k] : f.badges.filter((x) => x !== k) })} /><span>{label}</span></label>
+          ))}
+        </div>
+        <span className="field-hint">Tick only what is true. "New" shows by itself for the first 14 days, and "Sale" shows when there is an old price.</span>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Complete the look: worn with</span>
+        {f.pairs_with.length > 0 && <div className="tags">{f.pairs_with.map((pid) => { const o = all.data?.products.find((x) => x.id === pid); return <button type="button" key={pid} onClick={() => setF({ ...f, pairs_with: f.pairs_with.filter((x) => x !== pid) })} aria-label="Remove">{o ? o.name : `Item ${pid}`}<i>×</i></button>; })}</div>}
+        {f.pairs_with.length < 4 && (
+          <select value="" onChange={(e) => { const v = Number(e.target.value); if (v) setF({ ...f, pairs_with: [...f.pairs_with, v] }); }}>
+            <option value="">Add an item that goes with this one</option>
+            {(all.data?.products || []).filter((o) => o.id !== id && !f.pairs_with.includes(o.id) && o.status !== 'draft').map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        )}
+        <span className="field-hint">Up to 4. Customers see these on the item page and can add the whole outfit at once.</span>
+      </div>
+
       {error && <Notice>{error}</Notice>}
       {saved && <Notice kind="ok">Saved.</Notice>}
       <div className="editor-actions">
@@ -271,11 +300,11 @@ function ItemEditor({ id }: { id: number | null }) {
 function Orders() {
   const { data, error, reload } = useLoad<{ orders: any[] }>('/api/admin/orders');
   const set = async (id: number, status: string) => { await post(`/api/admin/orders/${id}/status`, { status }); reload(); };
-  const LABEL: Record<string, string> = { new: 'New', confirmed: 'Confirmed', delivered: 'Delivered', cancelled: 'Cancelled' };
+  const LABEL: Record<string, string> = { new: 'New', confirmed: 'Confirmed', preparing: 'Preparing', out_for_delivery: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' };
   return (
     <>
       <div className="adm-head"><h1>Orders</h1></div>
-      <p className="adm-sum">Every order a customer sends from the shop is saved here, even if they never press send on WhatsApp.</p>
+      <p className="adm-sum">Every order a customer sends from the shop is saved here, even if they never press send on WhatsApp. When you change the status, the customer sees it on their order tracking page.</p>
       {error ? <Notice>{error}</Notice> : !data ? <Loading /> : data.orders.length === 0 ? <div className="empty"><h2>No orders yet</h2><p>When a customer sends their bag, it shows here with their name, number and location.</p></div> : (
         <ul className="orders">
           {data.orders.map((o) => (
@@ -285,7 +314,8 @@ function Orders() {
               </div>
               <div className="ord-who"><b>{o.name}</b><a href={`tel:${o.phone}`}>{prettyPhone(o.phone)}</a><a href={`https://wa.me/233${o.phone.slice(1)}`} target="_blank" rel="noopener">WhatsApp</a></div>
               <div className="ord-where">{o.location}{o.note ? ` (${o.note})` : ''}</div>
-              <ul className="ord-items">{o.items.map((l: any, i: number) => <li key={i}><span>{l.qty} × {l.name}{[l.size && `size ${l.size}`, l.colour].filter(Boolean).length ? ` (${[l.size && `size ${l.size}`, l.colour].filter(Boolean).join(', ')})` : ''}</span><span>{ghs(l.priceMinor * l.qty)}</span></li>)}</ul>
+              <ul className="ord-items">{o.items.map((l: any, i: number) => <li key={i}><span>{l.qty} × {l.name}{[l.size && `size ${l.size}`, l.colour].filter(Boolean).length ? ` (${[l.size && `size ${l.size}`, l.colour].filter(Boolean).join(', ')})` : ''}</span><span>{l.priceMinor > 0 ? ghs(l.priceMinor * l.qty) : 'No price yet'}</span></li>)}</ul>
+              {o.gift ? <div className="ord-where">Gift{o.gift.recipient ? ` for ${o.gift.recipient}` : ''}{o.gift.message ? `: "${o.gift.message}"` : ''}</div> : null}
               <div className="ord-total"><span>Items total</span><b>{ghs(o.totalMinor)}</b></div>
             </li>
           ))}
@@ -324,6 +354,64 @@ function Categories() {
   );
 }
 
+// ---------- Collections ----------
+function Collections() {
+  const { data, error, reload } = useLoad<{ collections: ACollection[] }>('/api/admin/collections');
+  const prods = useLoad<{ products: AProduct[] }>('/api/admin/products');
+  const [open, setOpen] = useState<number | 'new-vibe' | 'new-edit' | null>(null);
+  const [f, setF] = useState<Omit<ACollection, 'id' | 'slug'>>({ kind: 'vibe', name: '', tagline: '', body: '', is_active: true, sort_order: 0, product_ids: [] });
+  const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
+  const start = (c: ACollection | 'new-vibe' | 'new-edit') => {
+    setErr(null);
+    if (typeof c === 'string') { setF({ kind: c === 'new-edit' ? 'edit' : 'vibe', name: '', tagline: '', body: '', is_active: true, sort_order: (data?.collections.length || 0) + 1, product_ids: [] }); setOpen(c); }
+    else { setF({ kind: c.kind, name: c.name, tagline: c.tagline, body: c.body, is_active: c.is_active, sort_order: c.sort_order, product_ids: c.product_ids }); setOpen(c.id); }
+  };
+  const save = async (e: FormEvent) => {
+    e.preventDefault(); setBusy(true); setErr(null);
+    try { if (typeof open === 'number') await put(`/api/admin/collections/${open}`, f); else await post('/api/admin/collections', f); setOpen(null); reload(); } catch (x) { setErr(errMsg(x)); } finally { setBusy(false); }
+  };
+  const remove = async () => { if (typeof open !== 'number' || !confirm(`Delete "${f.name}"? The items stay in the shop.`)) return; try { await del(`/api/admin/collections/${open}`); setOpen(null); reload(); } catch (x) { setErr(errMsg(x)); } };
+  const list = prods.data?.products.filter((p) => p.status !== 'draft') || [];
+  if (open !== null) return (
+    <form className="editor" onSubmit={save}>
+      <div className="adm-head"><h1>{typeof open === 'number' ? 'Edit collection' : f.kind === 'edit' ? 'New edit' : 'New vibe'}</h1><button type="button" className="link-btn" onClick={() => setOpen(null)}>Back</button></div>
+      <Field label="Name"><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required minLength={2} maxLength={50} placeholder={f.kind === 'edit' ? 'For example: All white, worn sharp' : 'For example: The Weekend'} /></Field>
+      <Field label="Short line under the name"><input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} maxLength={120} /></Field>
+      {f.kind === 'edit' && <Field label="A few sentences about this edit" hint="Shown on the home page next to the photo."><textarea rows={4} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} maxLength={800} /></Field>}
+      <label className="check"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /><span>Show on the shop</span></label>
+      <div className="field">
+        <span className="field-label">Items in this collection ({f.product_ids.length})</span>
+        <ul className="pick">
+          {list.map((p) => {
+            const on = f.product_ids.includes(p.id);
+            return <li key={p.id}><label><input type="checkbox" checked={on} onChange={() => setF({ ...f, product_ids: on ? f.product_ids.filter((x) => x !== p.id) : [...f.product_ids, p.id] })} /><span className="adm-thumb">{p.images[0] ? <img src={p.images[0].thumb || p.images[0].url} alt="" loading="lazy" /> : <PhotoBlank name={p.name} />}</span><span>{p.name}</span></label></li>;
+          })}
+        </ul>
+        <span className="field-hint">Items show in the order you tick them. The first one's photo is the cover.</span>
+      </div>
+      {err && <Notice>{err}</Notice>}
+      <div className="editor-actions"><button className="btn btn-dark" disabled={busy}>{busy ? 'Saving' : 'Save collection'}</button>{typeof open === 'number' ? <button type="button" className="link-btn danger" onClick={remove}>Delete collection</button> : null}</div>
+    </form>
+  );
+  return (
+    <>
+      <div className="adm-head"><h1>Collections</h1></div>
+      <p className="adm-sum">"Shop by vibe" groups items by mood. "The Edit" is the featured story on the home page: the first edit that is shown is the one customers see.</p>
+      {error ? <Notice>{error}</Notice> : !data ? <Loading /> : (
+        <ul className="adm-list">
+          {data.collections.map((c) => (
+            <li key={c.id} className="adm-coll">
+              <div className="adm-li-main"><button className="adm-li-name as-link" onClick={() => start(c)}>{c.name}</button><span className="adm-li-meta">{c.kind === 'edit' ? 'The Edit' : 'Vibe'}, {c.product_ids.length} item{c.product_ids.length === 1 ? '' : 's'}{c.is_active ? '' : ', hidden'}</span></div>
+              <button className="btn btn-line-dark" onClick={() => start(c)}>Edit</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="editor-actions" style={{ marginTop: 16 }}><button className="btn btn-dark" onClick={() => start('new-vibe')}><IcPlus />New vibe</button><button className="btn btn-line-dark" onClick={() => start('new-edit')}><IcPlus />New edit</button></div>
+    </>
+  );
+}
+
 // ---------- Shop details ----------
 function Details({ me }: { me: Me }) {
   const { data, error } = useLoad<{ store: any }>('/api/admin/settings');
@@ -331,7 +419,7 @@ function Details({ me }: { me: Me }) {
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [pw, setPw] = useState({ current: '', next: '' }); const [pwMsg, setPwMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [invite, setInvite] = useState<string | null>(null);
-  useEffect(() => { if (data) setF({ ...data.store, phones: data.store.phones.join(', ') }); }, [data]);
+  useEffect(() => { if (data) setF({ ...data.store, phones: data.store.phones.join(', '), free_delivery: data.store.free_delivery_minor ? String(data.store.free_delivery_minor / 100) : '' }); }, [data]);
   if (error) return <Notice>{error}</Notice>;
   if (!f) return <Loading />;
   const save = async (e: FormEvent) => {
@@ -351,6 +439,8 @@ function Details({ me }: { me: Me }) {
         <Field label="Phone numbers shown on the site" hint="Separate numbers with a comma."><input value={f.phones} onChange={(e) => setF({ ...f, phones: e.target.value })} required /></Field>
         <Field label="Location (optional)" hint="Town or shop address, shown at the bottom of the site."><input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} maxLength={120} /></Field>
         <Field label="Delivery note"><textarea rows={3} value={f.delivery_note} onChange={(e) => setF({ ...f, delivery_note: e.target.value })} maxLength={400} /></Field>
+        <Field label="Free delivery from (GH₵, optional)" hint="Leave empty if you don't offer free delivery. If you set an amount, the bag tells customers how far they are from it."><input value={f.free_delivery ?? ''} onChange={(e) => setF({ ...f, free_delivery: e.target.value })} inputMode="decimal" placeholder="For example: 500" /></Field>
+        <label className="check"><input type="checkbox" checked={!!f.gift_enabled} onChange={(e) => setF({ ...f, gift_enabled: e.target.checked })} /><span>Let customers mark an order as a gift (they give the receiver's name and a message for you to pass on)</span></label>
         <Field label="About the shop (optional)"><textarea rows={4} value={f.about} onChange={(e) => setF({ ...f, about: e.target.value })} maxLength={1500} /></Field>
         {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
         <div className="editor-actions"><button className="btn btn-dark" disabled={busy}>{busy ? 'Saving' : 'Save changes'}</button></div>
@@ -389,6 +479,7 @@ export function AdminApp({ path }: { path: string }) {
   if (tab === 'items' && seg[1] === 'new') page = <ItemEditor key="new" id={null} />;
   else if (tab === 'items' && seg[1]) page = <ItemEditor key={seg[1]} id={Number(seg[1])} />;
   else if (tab === 'orders') page = <Orders />;
+  else if (tab === 'collections') page = <Collections />;
   else if (tab === 'categories') page = <Categories />;
   else if (tab === 'details') page = <Details me={me} />;
   else page = <Items />;

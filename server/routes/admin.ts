@@ -9,13 +9,14 @@ import { clearStoreCache, getStore } from './shop.js';
 import { config } from '../config.js';
 
 const MAX_IMAGES = 8;
+const ORDER_STATUSES = ['new', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'] as const;
 const MAX_IMAGE_BYTES = 1_400_000;
 
 export function slugify(s: string): string {
   return s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'item';
 }
 
-async function uniqueSlug(table: 'products' | 'categories', base: string, exceptId?: number): Promise<string> {
+async function uniqueSlug(table: 'products' | 'categories' | 'collections', base: string, exceptId?: number): Promise<string> {
   let slug = base;
   for (let n = 2; n < 200; n++) {
     const hit = await one(`SELECT id FROM ${table} WHERE slug = $1 AND ($2::bigint IS NULL OR id <> $2)`, [slug, exceptId ?? null]);
@@ -47,12 +48,14 @@ const productInput = z.object({
   colours: optionList.default([]),
   status: z.enum(['draft', 'live', 'sold_out']),
   is_featured: z.boolean().default(false),
+  badges: z.array(z.enum(['trending', 'limited', 'bestseller'])).max(3).default([]).transform((a) => [...new Set(a)]),
+  pairs_with: z.array(z.number().int().positive()).max(4).default([]),
 });
 
 const adminProduct = (p: any) => ({
   id: p.id, slug: p.slug, name: p.name, categoryId: p.category_id, categoryName: p.category_name ?? null, description: p.description,
-  priceMinor: p.price_minor, compareAtMinor: p.compare_at_minor, sizes: p.sizes, colours: p.colours, status: p.status, isFeatured: p.is_featured,
-  images: (p.images || []).map((id: number) => ({ id, url: `/media/${id}` })), updatedAt: p.updated_at,
+  priceMinor: p.price_minor, compareAtMinor: p.compare_at_minor, sizes: p.sizes, colours: p.colours, status: p.status, isFeatured: p.is_featured, badges: p.badges || [], pairsWith: (p.pairs_with || []).map(Number),
+  images: (p.images || []).map((id: number) => ({ id, url: `/media/${id}`, thumb: `/media/${id}/t` })), updatedAt: p.updated_at,
 });
 
 const PRODUCT_ADMIN = `SELECT p.*, c.name AS category_name,
@@ -101,8 +104,8 @@ export function registerAdminRoutes(r: Router) {
     const b = productInput.parse(ctx.body);
     if (b.compare_at && b.compare_at <= b.price) throw new HttpError(400, 'The old price must be higher than the selling price', 'bad_compare');
     const slug = await uniqueSlug('products', slugify(b.name));
-    const row = await one<{ id: number }>(`INSERT INTO products (name, slug, category_id, description, price_minor, compare_at_minor, sizes, colours, status, is_featured)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`, [b.name, slug, b.category_id, b.description, b.price, b.compare_at ?? null, b.sizes, b.colours, b.status, b.is_featured]);
+    const row = await one<{ id: number }>(`INSERT INTO products (name, slug, category_id, description, price_minor, compare_at_minor, sizes, colours, status, is_featured, badges, pairs_with)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`, [b.name, slug, b.category_id, b.description, b.price, b.compare_at ?? null, b.sizes, b.colours, b.status, b.is_featured, b.badges, b.pairs_with]);
     const p = await one(`${PRODUCT_ADMIN} WHERE p.id = $1`, [row!.id]);
     ctx.json(201, { product: adminProduct(p) });
   });
@@ -114,8 +117,8 @@ export function registerAdminRoutes(r: Router) {
     const cur = await one('SELECT id, name, slug FROM products WHERE id = $1', [id]);
     if (!cur) throw notFound('Item not found');
     const slug = cur.name === b.name ? cur.slug : await uniqueSlug('products', slugify(b.name), id);
-    await q(`UPDATE products SET name=$2, slug=$3, category_id=$4, description=$5, price_minor=$6, compare_at_minor=$7, sizes=$8, colours=$9, status=$10, is_featured=$11, updated_at=now() WHERE id=$1`,
-      [id, b.name, slug, b.category_id, b.description, b.price, b.compare_at ?? null, b.sizes, b.colours, b.status, b.is_featured]);
+    await q(`UPDATE products SET name=$2, slug=$3, category_id=$4, description=$5, price_minor=$6, compare_at_minor=$7, sizes=$8, colours=$9, status=$10, is_featured=$11, badges=$12, pairs_with=$13, updated_at=now() WHERE id=$1`,
+      [id, b.name, slug, b.category_id, b.description, b.price, b.compare_at ?? null, b.sizes, b.colours, b.status, b.is_featured, b.badges, b.pairs_with.filter((x) => x !== id)]);
     const p = await one(`${PRODUCT_ADMIN} WHERE p.id = $1`, [id]);
     return { product: adminProduct(p) };
   });
@@ -136,18 +139,21 @@ export function registerAdminRoutes(r: Router) {
   // ---------- Photos ----------
   r.post('/api/admin/products/:id/images', requireStaff, rateLimit('upload', 120, 10 * 60_000), async (ctx) => {
     const id = Number(ctx.params.id) || 0;
-    const b = z.object({ data: z.string().min(50).max(3_000_000) }).parse(ctx.body);
+    const b = z.object({ data: z.string().min(50).max(3_000_000), thumb: z.string().min(50).max(400_000).optional() }).parse(ctx.body);
     const img = decodeImage(b.data);
+    // The browser also sends a small copy for the shop's cards. If it is missing or broken, cards use the full photo.
+    let thumb: Buffer | null = null;
+    if (b.thumb) { try { thumb = decodeImage(b.thumb).bytes; } catch { thumb = null; } }
     const row = await tx(async (db) => {
       const p = await one('SELECT id FROM products WHERE id = $1 FOR UPDATE', [id], db);
       if (!p) throw notFound('Item not found');
       const n = (await one<{ n: number; pos: number }>('SELECT count(*)::int AS n, COALESCE(max(position), -1)::int AS pos FROM product_images WHERE product_id = $1', [id], db))!;
       if (n.n >= MAX_IMAGES) throw conflict(`An item can have up to ${MAX_IMAGES} photos. Remove one first.`, 'too_many_images');
-      const r2 = await one<{ id: number }>(`INSERT INTO product_images (product_id, position, mime, bytes) VALUES ($1,$2,$3, decode($4, 'base64')) RETURNING id`, [id, n.pos + 1, img.mime, img.bytes.toString('base64')], db);
+      const r2 = await one<{ id: number }>(`INSERT INTO product_images (product_id, position, mime, bytes, thumb) VALUES ($1,$2,$3, decode($4, 'base64'), decode($5, 'base64')) RETURNING id`, [id, n.pos + 1, img.mime, img.bytes.toString('base64'), thumb ? thumb.toString('base64') : null], db);
       await db.query('UPDATE products SET updated_at = now() WHERE id = $1', [id]);
       return r2!;
     });
-    ctx.json(201, { image: { id: row.id, url: `/media/${row.id}` } });
+    ctx.json(201, { image: { id: row.id, url: `/media/${row.id}`, thumb: `/media/${row.id}/t` } });
   });
 
   r.put('/api/admin/products/:id/images/order', requireStaff, async (ctx) => {
@@ -193,16 +199,61 @@ export function registerAdminRoutes(r: Router) {
     return { ok: true };
   });
 
+  // ---------- Collections: "Shop by vibe" and "The Edit" ----------
+  const collectionInput = z.object({
+    kind: z.enum(['vibe', 'edit']), name: z.string().trim().min(2).max(50), tagline: z.string().trim().max(120).default(''), body: z.string().trim().max(800).default(''),
+    is_active: z.boolean().default(true), sort_order: z.number().int().min(0).max(999).default(0), product_ids: z.array(z.number().int().positive()).max(60).default([]),
+  });
+  const saveProducts = async (db: { query: (t: string, v?: unknown[]) => Promise<unknown> }, id: number, ids: number[]) => {
+    await db.query('DELETE FROM collection_products WHERE collection_id = $1', [id]);
+    const unique = [...new Set(ids)];
+    for (let i = 0; i < unique.length; i++) await db.query('INSERT INTO collection_products (collection_id, product_id, position) SELECT $1, id, $3 FROM products WHERE id = $2 ON CONFLICT DO NOTHING', [id, unique[i], i]);
+  };
+
+  r.get('/api/admin/collections', requireStaff, async () => ({
+    collections: (await q(`SELECT k.id, k.kind, k.name, k.slug, k.tagline, k.body, k.is_active, k.sort_order,
+      COALESCE((SELECT array_agg(cp.product_id ORDER BY cp.position, cp.product_id) FROM collection_products cp WHERE cp.collection_id = k.id), '{}') AS product_ids
+      FROM collections k ORDER BY k.kind DESC, k.sort_order, k.id`)).map((k: any) => ({ ...k, product_ids: k.product_ids.map(Number) })),
+  }));
+
+  r.post('/api/admin/collections', requireStaff, async (ctx) => {
+    const b = collectionInput.parse(ctx.body);
+    const slug = await uniqueSlug('collections', slugify(b.name));
+    const id = await tx(async (db) => {
+      const row = await one<{ id: number }>('INSERT INTO collections (kind, name, slug, tagline, body, is_active, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id', [b.kind, b.name, slug, b.tagline, b.body, b.is_active, b.sort_order], db);
+      await saveProducts(db, row!.id, b.product_ids);
+      return row!.id;
+    });
+    ctx.json(201, { id });
+  });
+
+  r.put('/api/admin/collections/:id', requireStaff, async (ctx) => {
+    const id = Number(ctx.params.id) || 0;
+    const b = collectionInput.parse(ctx.body);
+    await tx(async (db) => {
+      const res = await db.query('UPDATE collections SET kind=$2, name=$3, tagline=$4, body=$5, is_active=$6, sort_order=$7 WHERE id=$1 RETURNING id', [id, b.kind, b.name, b.tagline, b.body, b.is_active, b.sort_order]);
+      if (!res.rows.length) throw notFound('Collection not found');
+      await saveProducts(db, id, b.product_ids);
+    });
+    return { ok: true };
+  });
+
+  r.delete('/api/admin/collections/:id', requireStaff, async (ctx) => {
+    const res = await q('DELETE FROM collections WHERE id = $1 RETURNING id', [Number(ctx.params.id) || 0]);
+    if (!res.length) throw notFound('Collection not found');
+    return { ok: true };
+  });
+
   // ---------- Orders ----------
   r.get('/api/admin/orders', requireStaff, async (ctx) => {
     const status = ctx.query.get('status');
-    const rows = await q(`SELECT id, reference, customer_name, customer_phone, location, note, items, total_minor, status, created_at FROM orders
-      WHERE ($1::text IS NULL OR status = $1) ORDER BY created_at DESC LIMIT 200`, [status && ['new', 'confirmed', 'delivered', 'cancelled'].includes(status) ? status : null]);
-    return { orders: rows.map((o: any) => ({ id: o.id, reference: o.reference, name: o.customer_name, phone: o.customer_phone, location: o.location, note: o.note, items: o.items, totalMinor: o.total_minor, status: o.status, createdAt: o.created_at })) };
+    const rows = await q(`SELECT id, reference, customer_name, customer_phone, location, note, items, total_minor, status, gift, created_at FROM orders
+      WHERE ($1::text IS NULL OR status = $1) ORDER BY created_at DESC LIMIT 200`, [status && ORDER_STATUSES.includes(status as any) ? status : null]);
+    return { orders: rows.map((o: any) => ({ id: o.id, reference: o.reference, name: o.customer_name, phone: o.customer_phone, location: o.location, note: o.note, items: o.items, totalMinor: o.total_minor, status: o.status, gift: o.gift, createdAt: o.created_at })) };
   });
 
   r.post('/api/admin/orders/:id/status', requireStaff, async (ctx) => {
-    const b = z.object({ status: z.enum(['new', 'confirmed', 'delivered', 'cancelled']) }).parse(ctx.body);
+    const b = z.object({ status: z.enum(ORDER_STATUSES) }).parse(ctx.body);
     const res = await q('UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING id', [Number(ctx.params.id) || 0, b.status]);
     if (!res.length) throw notFound('Order not found');
     return { ok: true };
@@ -216,7 +267,9 @@ export function registerAdminRoutes(r: Router) {
       name: z.string().trim().min(2).max(60), tagline: z.string().trim().max(120),
       whatsapp: zPhone, phones: z.array(zPhone).min(1).max(4),
       location: z.string().trim().max(120), delivery_note: z.string().trim().max(400), about: z.string().trim().max(1500),
-    }).parse(ctx.body);
+      free_delivery: z.union([z.number(), z.string()]).optional().transform((v) => { const n = Number(String(v ?? '').replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 && n < 1_000_000 ? Math.round(n * 100) : 0; }),
+      gift_enabled: z.boolean().optional().default(false),
+    }).transform(({ free_delivery, ...rest }) => ({ ...rest, free_delivery_minor: free_delivery })).parse(ctx.body);
     await q(`INSERT INTO settings (key, value, updated_at) VALUES ('store', $1, now()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [JSON.stringify(b)]);
     clearStoreCache();
     return { store: b };

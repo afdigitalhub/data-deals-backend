@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pool } from './db/pool.js';
 import { log } from './lib/log.js';
@@ -80,6 +80,106 @@ const BATCHES: Batch[] = [
 
 export async function seedOnce(): Promise<void> {
   for (const b of BATCHES) await importBatch(b);
+  await once('collections_1', seedCollections);
+  await once('pairings_1', seedPairings);
+  await attachThumbs();
+}
+
+type Db = { query: (text: string, values?: unknown[]) => Promise<{ rows: any[] }> };
+/** Runs a setup step a single time, remembered by a settings marker, so later edits by the owner are never overwritten. */
+async function once(marker: string, fn: (db: Db) => Promise<number>): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(727274002)');
+    const done = await client.query('SELECT 1 FROM settings WHERE key = $1', [marker]);
+    if (done.rows.length) { await client.query('COMMIT'); return; }
+    const n = await fn(client);
+    await client.query(`INSERT INTO settings (key, value) VALUES ($1, $2::jsonb)`, [marker, JSON.stringify({ count: n, at: new Date().toISOString() })]);
+    await client.query('COMMIT');
+    log.info('setup step done', { marker, count: n });
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch { /* ignore */ }
+    log.error('setup step failed', { marker, err: e });
+  } finally { client.release(); }
+}
+
+// A first arrangement of the items already in the shop. The owner can change every one of these in the admin.
+const COLLECTIONS: Array<{ kind: 'vibe' | 'edit'; name: string; slug: string; tagline: string; body?: string; items: string[] }> = [
+  { kind: 'vibe', name: 'The Street King', slug: 'the-street-king', tagline: 'Hoodies, prints and loose fits', items: [
+    'oversized-hoodie-joggers-set', 'cross-print-zip-hoodie', 'puffer-vest-knit-sleeves', 'oversized-letter-print-t-shirt', 'leopard-side-panel-joggers',
+    'black-white-low-top-sneakers-red-sole', 'camo-jacket-tan-collar', 'white-t-shirt-hand-heart-prints', 'camo-sleeveless-graphic-t-shirt', 'white-trousers-leopard-side-panel'] },
+  { kind: 'vibe', name: 'The Clean Look', slug: 'the-clean-look', tagline: 'Sharp shirts, sets and polished shoes', items: [
+    'white-tie-front-shirt-trousers-set', 'white-long-sleeve-shirt-red-heart', 'black-patent-suede-lace-up-shoes', 'pink-blazer-dress-white-lapel', 'white-short-sleeve-shirt-chest-pockets',
+    'white-button-front-maxi-dress', 'black-suede-loafers-gold-buckle', 'pink-shirt-wide-leg-trousers-set', 'orange-shirt-trousers-set', 'white-shirt-dress-check-trim',
+    'sky-blue-cowl-neck-wide-leg-outfit', 'white-long-sleeve-shirt-printed-sleeves'] },
+  { kind: 'vibe', name: 'The Weekend', slug: 'the-weekend', tagline: 'Denim, shorts and easy tops', items: [
+    'light-denim-button-front-dress', 'brown-denim-shorts', 'dark-green-belted-shorts', 'dark-denim-button-front-dress', 'asymmetric-sleeveless-top', 'grey-sleeveless-t-shirt',
+    'red-v-neck-ruched-top', 'white-v-neck-ruched-top', 'leopard-print-dungaree-dress', 'black-white-tie-dye-shirt-green-stripe', 'striped-blouse-wine-leggings-set',
+    'pink-chain-print-shirt-brown-leggings-set', 'red-print-cape-top-white-leggings-set', 'beige-sleeveless-bodysuit'] },
+  { kind: 'vibe', name: 'The Night Out', slug: 'the-night-out', tagline: 'Dresses and shoes for after dark', items: [
+    'beige-halter-neck-maxi-dress', 'yellow-off-shoulder-puff-dress', 'off-shoulder-cape-dress', 'black-velvet-loafers-silver-spade', 'pink-tiered-dress-black-bow-straps',
+    'lime-green-tie-front-shirt-trousers-set', 'red-print-tiered-dress', 'white-halter-top-gold-neck-ring', 'black-suede-chunky-loafers-chain', 'pink-check-long-sleeve-two-piece',
+    'pink-button-front-dress-white-collar', 'pink-floral-long-sleeve-two-piece'] },
+  { kind: 'edit', name: 'All white, worn sharp', slug: 'all-white-worn-sharp', tagline: 'The Edit',
+    body: 'White is the quickest way to look put together. These are the white pieces in the shop right now, for him and for her: wear one with denim, or go head to toe.', items: [
+    'white-button-front-maxi-dress', 'white-long-sleeve-shirt-red-heart', 'white-tie-front-shirt-trousers-set', 'white-short-sleeve-shirt-chest-pockets', 'white-shirt-dress-check-trim',
+    'white-trousers-leopard-side-panel', 'white-halter-top-gold-neck-ring'] },
+];
+
+async function seedCollections(db: Db): Promise<number> {
+  let n = 0;
+  for (let i = 0; i < COLLECTIONS.length; i++) {
+    const c = COLLECTIONS[i];
+    const row = await db.query(`INSERT INTO collections (kind, name, slug, tagline, body, sort_order) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (slug) DO NOTHING RETURNING id`, [c.kind, c.name, c.slug, c.tagline, c.body || '', i]);
+    if (!row.rows.length) continue;
+    for (let j = 0; j < c.items.length; j++) {
+      await db.query(`INSERT INTO collection_products (collection_id, product_id, position) SELECT $1, id, $3 FROM products WHERE slug = $2 ON CONFLICT DO NOTHING`, [row.rows[0].id, c.items[j], j]);
+    }
+    n++;
+  }
+  return n;
+}
+
+// "Complete the look": pieces that are worn together. Each row is an item and what it pairs with.
+const PAIRINGS: Array<[string, string[]]> = [
+  ['brown-denim-shorts', ['white-short-sleeve-shirt-chest-pockets', 'black-white-low-top-sneakers-red-sole']],
+  ['grey-sleeveless-t-shirt', ['brown-denim-shorts', 'black-white-low-top-sneakers-red-sole']],
+  ['white-long-sleeve-shirt-red-heart', ['black-suede-loafers-gold-buckle']],
+  ['white-long-sleeve-shirt-printed-sleeves', ['black-patent-suede-lace-up-shoes']],
+  ['oversized-letter-print-t-shirt', ['leopard-side-panel-joggers', 'black-white-low-top-sneakers-red-sole']],
+  ['cross-print-zip-hoodie', ['leopard-side-panel-joggers', 'black-white-low-top-sneakers-red-sole']],
+  ['puffer-vest-knit-sleeves', ['oversized-letter-print-t-shirt', 'white-trousers-leopard-side-panel']],
+  ['camo-jacket-tan-collar', ['grey-sleeveless-t-shirt', 'brown-denim-shorts']],
+  ['white-t-shirt-hand-heart-prints', ['white-trousers-leopard-side-panel', 'black-white-low-top-sneakers-red-sole']],
+  ['red-v-neck-ruched-top', ['dark-green-belted-shorts']],
+  ['white-v-neck-ruched-top', ['dark-green-belted-shorts']],
+  ['white-halter-top-gold-neck-ring', ['dark-green-belted-shorts']],
+  ['beige-sleeveless-bodysuit', ['dark-green-belted-shorts']],
+];
+
+async function seedPairings(db: Db): Promise<number> {
+  let n = 0;
+  for (const [slug, others] of PAIRINGS) {
+    const r = await db.query(`UPDATE products SET pairs_with = (SELECT COALESCE(array_agg(id), '{}') FROM products WHERE slug = ANY($2::text[])) WHERE slug = $1 AND pairs_with = '{}' RETURNING id`, [slug, others]);
+    n += r.rows.length;
+  }
+  return n;
+}
+
+/** Gives photos their small copy (used on cards) where one was prepared ahead of time. Safe to run on every start. */
+async function attachThumbs(): Promise<void> {
+  try {
+    const rows = await pool.query(`SELECT id, md5(bytes) AS h FROM product_images WHERE thumb IS NULL`);
+    let n = 0;
+    for (const r of rows.rows) {
+      const f = join(process.cwd(), 'seed', 'thumbs', `${r.h}.webp`);
+      if (!existsSync(f)) continue;
+      await pool.query('UPDATE product_images SET thumb = $2 WHERE id = $1', [r.id, readFileSync(f)]);
+      n++;
+    }
+    if (n) log.info('small photo copies attached', { count: n });
+  } catch (e) { log.error('small photo copies failed', { err: e }); }
 }
 
 async function importBatch(batch: Batch): Promise<void> {
