@@ -8,7 +8,7 @@ import { log } from './lib/log.js';
  * Each batch runs once (guarded by a settings marker), so items the owner later edits or deletes never come back.
  * Prices were not supplied, so each item is stored with price 0 ("ask for price") until the owner sets one.
  */
-type Batch = { marker: string; dir: string; categories?: Array<[name: string, slug: string, sort: number]>; items: Array<[file: string, name: string, slug: string, category: string]> };
+type Batch = { marker: string; dir: string; categories?: Array<[name: string, slug: string, sort: number]>; replace?: Array<[slug: string, files: string]>; items: Array<[file: string, name: string, slug: string, category: string]> };
 const BATCHES: Batch[] = [
   { marker: 'import_womens_outfits_1', dir: 'women', items: [
     ['w1.jpg', 'Pink blazer dress with white lapel', 'pink-blazer-dress-white-lapel', 'womens-outfits'],
@@ -33,6 +33,32 @@ const BATCHES: Batch[] = [
     ['b.jpg', 'Black velvet loafers with silver spade', 'black-velvet-loafers-silver-spade', 'mens-shoes'],
     ['c.jpg', 'Pink button-front dress with white collar', 'pink-button-front-dress-white-collar', 'womens-outfits'],
   ] },
+  // Photos in a batch entry can list several files separated by "|"; the first is the main photo.
+  { marker: 'import_batch_4', dir: 'batch4',
+    replace: [
+      ['leopard-print-dungaree-dress', 'leopard.jpg|leopard-2.jpg'],
+      ['pink-chain-print-shirt-brown-leggings-set', 'chain.jpg|chain-2.jpg'],
+      ['striped-blouse-wine-leggings-set', 'striped.jpg|striped-2.jpg'],
+    ],
+    items: [
+      ['yellow.jpg', 'Yellow off-shoulder puff dress', 'yellow-off-shoulder-puff-dress', 'womens-outfits'],
+      ['whiteset.jpg|whiteset-2.jpg', 'White tie-front shirt and trousers set', 'white-tie-front-shirt-trousers-set', 'womens-outfits'],
+      ['lime.jpg|lime-2.jpg', 'Lime green tie-front shirt and trousers set', 'lime-green-tie-front-shirt-trousers-set', 'womens-outfits'],
+      ['darkdenim.jpg', 'Dark denim button-front dress', 'dark-denim-button-front-dress', 'womens-outfits'],
+      ['pinktier.jpg', 'Pink tiered dress with black bow straps', 'pink-tiered-dress-black-bow-straps', 'womens-outfits'],
+      ['halter.jpg', 'Beige halter-neck maxi dress', 'beige-halter-neck-maxi-dress', 'womens-outfits'],
+      ['orange.jpg', 'Orange shirt and trousers set', 'orange-shirt-trousers-set', 'womens-outfits'],
+      ['pinklinen.jpg', 'Pink shirt and wide-leg trousers set', 'pink-shirt-wide-leg-trousers-set', 'womens-outfits'],
+      ['shirtdress.jpg', 'White shirt dress with check trim', 'white-shirt-dress-check-trim', 'womens-outfits'],
+      ['lightdenim.jpg', 'Light denim button-front dress', 'light-denim-button-front-dress', 'womens-outfits'],
+      ['pinkcheck.jpg|pinkcheck-2.jpg', 'Pink check long-sleeve two-piece', 'pink-check-long-sleeve-two-piece', 'womens-outfits'],
+      ['cape.jpg|cape-2.jpg', 'Red print cape top and white leggings set', 'red-print-cape-top-white-leggings-set', 'womens-outfits'],
+      ['redtop.jpg', 'Red V-neck ruched top', 'red-v-neck-ruched-top', 'womens-outfits'],
+      ['whitevtop.jpg|whitevtop-2.jpg', 'White V-neck ruched top', 'white-v-neck-ruched-top', 'womens-outfits'],
+      ['whitehalter.jpg', 'White halter top with gold neck ring', 'white-halter-top-gold-neck-ring', 'womens-outfits'],
+      ['shorts.jpg|shorts-2.jpg', 'Dark green belted shorts', 'dark-green-belted-shorts', 'womens-outfits'],
+      ['bodysuit.jpg|bodysuit-2.jpg', 'Beige sleeveless bodysuit', 'beige-sleeveless-bodysuit', 'womens-outfits'],
+    ] },
 ];
 
 export async function seedOnce(): Promise<void> {
@@ -55,15 +81,24 @@ async function importBatch(batch: Batch): Promise<void> {
     for (const [file, name, slug, catSlug] of [...batch.items].reverse()) {
       const cat = await client.query('SELECT id FROM categories WHERE slug = $1', [catSlug]);
       const catId = cat.rows[0]?.id ?? null;
-      let bytes: Buffer;
-      try { bytes = readFileSync(join(process.cwd(), 'seed', batch.dir, file)); } catch { log.warn('seed photo missing', { file }); continue; }
+      let photos: Buffer[];
+      try { photos = file.split('|').map((f) => readFileSync(join(process.cwd(), 'seed', batch.dir, f))); } catch { log.warn('seed photo missing', { file }); continue; }
       const exists = await client.query('SELECT 1 FROM products WHERE slug = $1', [slug]);
       if (exists.rows.length) continue;
       const p = await client.query(
         `INSERT INTO products (name, slug, category_id, description, price_minor, sizes, colours, status, is_featured, created_at)
          VALUES ($1,$2,$3,'',0,'{}','{}','live',false, now() + ($4 || ' milliseconds')::interval) RETURNING id`, [name, slug, catId, String(n)]);
-      await client.query(`INSERT INTO product_images (product_id, position, mime, bytes) VALUES ($1, 0, 'image/jpeg', $2)`, [p.rows[0].id, bytes]);
+      for (let i = 0; i < photos.length; i++) await client.query(`INSERT INTO product_images (product_id, position, mime, bytes) VALUES ($1, $2, 'image/jpeg', $3)`, [p.rows[0].id, i, photos[i]]);
       n++;
+    }
+    // Better copies of photos for items already on the shop. Only touches an item that still has just its one original photo.
+    for (const [slug, files] of batch.replace || []) {
+      const pr = await client.query('SELECT p.id, (SELECT count(*)::int FROM product_images i WHERE i.product_id = p.id) AS n FROM products p WHERE p.slug = $1', [slug]);
+      if (!pr.rows.length || pr.rows[0].n !== 1) continue;
+      let photos: Buffer[];
+      try { photos = files.split('|').map((f) => readFileSync(join(process.cwd(), 'seed', batch.dir, f))); } catch { continue; }
+      await client.query(`UPDATE product_images SET id = nextval(pg_get_serial_sequence('product_images','id')), bytes = $2, position = 0 WHERE product_id = $1`, [pr.rows[0].id, photos[0]]);
+      for (let i = 1; i < photos.length; i++) await client.query(`INSERT INTO product_images (product_id, position, mime, bytes) VALUES ($1, $2, 'image/jpeg', $3)`, [pr.rows[0].id, i, photos[i]]);
     }
     await client.query(`INSERT INTO settings (key, value) VALUES ($1, $2::jsonb)`, [MARKER, JSON.stringify({ imported: n, at: new Date().toISOString() })]);
     await client.query('COMMIT');
