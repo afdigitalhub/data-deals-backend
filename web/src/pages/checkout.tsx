@@ -26,6 +26,14 @@ export function CheckoutPage() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const submitted = useRef(false);
+  // First-time numbers can be held by the supplier for a one-time check, so we say so before payment.
+  const [firstTime, setFirstTime] = useState(false);
+  useEffect(() => {
+    if (!phone) return;
+    let off = false;
+    post<{ firstTime: boolean }>('/api/checkout/recipient-check', { phone }).then((r) => { if (!off) setFirstTime(!!r.firstTime); }).catch(() => {});
+    return () => { off = true; };
+  }, [phone]);
 
   // One idempotency key per checkout: refreshing or double-tapping reuses it, so the customer can never create two orders.
   const storageKey = `dd_ck:${productId}:${phone}:${amount || ''}:${user?.id || 'guest'}`;
@@ -123,6 +131,7 @@ export function CheckoutPage() {
 
             {config?.maintenance.enabled && <Alert kind="warn">{config.maintenance.message}</Alert>}
             {config?.notice?.enabled && !config.maintenance.enabled && <Alert kind="warn">{config.notice.message}</Alert>}
+            {firstTime && <Alert kind="info">First time for {phone}. It may go through a one-time verification, so delivery can take longer than usual.</Alert>}
             {config && !config.payments.enabled && <Alert kind="info">Online payments are being switched on. You'll be able to pay very soon.</Alert>}
             {config?.payments.enabled && config.payments.testMode && <Alert kind="info">Test mode: no real money will be taken and nothing will be delivered.</Alert>}
             {error ? <Alert>{errMsg(error)}</Alert> : null}
