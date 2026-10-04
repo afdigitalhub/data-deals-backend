@@ -1,6 +1,6 @@
 # Data Glow — Founders' Operating Guide
 
-For Adonle Fameye and Ben K. Everything here can be done from a phone.
+For Adonle Fameye and Emilia. Everything here can be done from a phone.
 
 ## 1. Where things are
 | What | Where |

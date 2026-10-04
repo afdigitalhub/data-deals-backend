@@ -59,5 +59,5 @@ export async function putSetting<K extends SettingKey>(key: K, value: Settings[K
 
 export function clearSettingsCache() { cache = null; }
 
-export const DEFAULT_FOUNDERS = [{ name: 'Adonle Fameye', title: 'Co-founder & CEO' }, { name: 'Ben K', title: 'Co-founder & CEO' }];
+export const DEFAULT_FOUNDERS = [{ name: 'Adonle Fameye', title: 'Co-founder' }, { name: 'Emilia', title: 'Co-founder' }];
 export const foundersOf = (b: any): Array<{ name: string; title: string }> => (Array.isArray(b?.founders) && b.founders.length ? b.founders : DEFAULT_FOUNDERS);
