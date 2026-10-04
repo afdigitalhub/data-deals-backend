@@ -19,7 +19,7 @@ self.addEventListener('fetch', (e) => {
   }
   if (e.request.mode === 'navigate') {
     // Network first so prices and pages are always fresh; offline fallback message if there is no connection.
-    e.respondWith(fetch(e.request).catch(() => new Response('<!doctype html><meta name=viewport content="width=device-width"><body style="font-family:sans-serif;padding:32px;text-align:center"><h2>You are offline</h2><p>Check your internet connection and try again.</p><button onclick="location.reload()" style="padding:12px 20px;border-radius:10px;border:0;background:#FF5FA2;font-weight:700">Retry</button></body>', { headers: { 'Content-Type': 'text/html' } })));
+    e.respondWith(fetch(e.request).catch(() => new Response('<!doctype html><meta name=viewport content="width=device-width"><body style="font-family:sans-serif;padding:32px;text-align:center"><h2>You are offline</h2><p>Check your internet connection and try again.</p><button onclick="location.reload()" style="padding:12px 20px;border-radius:10px;border:0;background:#FFD400;font-weight:700">Retry</button></body>', { headers: { 'Content-Type': 'text/html' } })));
   }
 });
 

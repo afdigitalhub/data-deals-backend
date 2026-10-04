@@ -7,7 +7,7 @@ import { ApiError } from '../lib/api';
 export function Logo({ to = '/', light = false }: { to?: string; light?: boolean }) {
   return (
     <Link to={to} className="logo" aria-label="Data Glow home" style={light ? { color: '#fff' } : undefined}>
-      <Bolt style={{ color: light ? '#FF5FA2' : 'var(--ink)' }} />
+      <Bolt style={{ color: light ? '#FFD400' : 'var(--ink)' }} />
       <span>Data <span className="deals">Glow</span></span>
     </Link>
   );
