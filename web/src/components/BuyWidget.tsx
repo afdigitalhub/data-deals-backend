@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { get } from '../lib/api';
+import { get, post } from '../lib/api';
 import { useApp, type Product } from '../lib/app-state';
 import { CATEGORY_LABEL, NETWORK_META, cedisToMinor, dataSize, ghs, guessNetwork, normalizePhone, type Network } from '../lib/format';
 import { navigate } from '../lib/router';
@@ -57,6 +57,17 @@ export function PhoneInput({ value, onChange, id = 'phone', network }: { value: 
   const { user, config } = useApp();
   const status = config ? phoneStatus(value, config.networks, network) : null;
   const [saved, setSaved] = useState<{ id: number; label: string; phone: string }[]>([]);
+  // First-time numbers can be held by the supplier for a one-time check, so we warn before payment.
+  const normal = status && (status.tone === 'ok' || status.tone === 'warn') ? normalizePhone(value) : null;
+  const [firstTime, setFirstTime] = useState<string | null>(null);
+  useEffect(() => {
+    if (!normal) return;
+    let off = false;
+    const t = setTimeout(() => {
+      post<{ firstTime: boolean }>('/api/checkout/recipient-check', { phone: normal }).then((r) => { if (!off) setFirstTime(r.firstTime ? normal : null); }).catch(() => {});
+    }, 350);
+    return () => { off = true; clearTimeout(t); };
+  }, [normal]);
   const contactsSupported = typeof navigator !== 'undefined' && 'contacts' in navigator && 'select' in (navigator as any).contacts;
   useEffect(() => {
     if (user) get('/api/account/recipients').then((r) => setSaved(r.recipients)).catch(() => {});
@@ -77,6 +88,11 @@ export function PhoneInput({ value, onChange, id = 'phone', network }: { value: 
       <div id={`${id}-check`} className={`phone-check ${status ? `is-${status.tone}` : ''}`} aria-live="polite">
         {status && <><span className="phone-check-ic" aria-hidden="true">{status.tone === 'ok' ? '✓' : status.tone === 'bad' ? '✕' : status.tone === 'warn' ? '!' : '…'}</span>{status.text}</>}
       </div>
+      {normal && firstTime === normal && (
+        <div className="phone-check is-info" role="note">
+          <span className="phone-check-ic" aria-hidden="true">i</span>First time for this number. It may go through a one-time verification, so delivery can take longer than usual.
+        </div>
+      )}
       {saved.length > 0 && (
         <div className="amount-chips" aria-label="Saved numbers">
           {saved.slice(0, 6).map((s) => <button key={s.id} type="button" className={`chip ${normalizePhone(value) === s.phone ? 'active' : ''}`} onClick={() => onChange(s.phone)}>{s.label}</button>)}

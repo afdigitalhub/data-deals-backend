@@ -756,6 +756,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .phone-check-ic { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; margin-top: 1px; background: var(--line); color: var(--ink); }
 .phone-check.is-ok { color: var(--success); } .phone-check.is-ok .phone-check-ic { background: var(--success); color: #fff; }
 .phone-check.is-bad { color: var(--danger); } .phone-check.is-bad .phone-check-ic { background: var(--danger); color: #fff; }
+.phone-check.is-info { color: var(--info); background: var(--info-bg); border-radius: 12px; padding: 9px 11px; } .phone-check.is-info .phone-check-ic { background: var(--info); color: #fff; font-style: italic; }
 .phone-check.is-warn { color: var(--warn); } .phone-check.is-warn .phone-check-ic { background: var(--warn); color: #fff; }
 .input.phone-ok { border-color: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 16%, transparent); }
 .input.phone-bad { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }

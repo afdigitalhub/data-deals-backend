@@ -101,6 +101,13 @@ export function registerPublicRoutes(r: Router) {
     return { quote: { productId: qt.productId, kind: qt.kind, network: qt.network, name: qt.name, faceValueMinor: qt.faceValueMinor, priceMinor: qt.priceMinor, feeMinor: qt.feeMinor, totalMinor: qt.totalMinor, currency: qt.currency } };
   });
 
+  // Tells the buyer when a number has never received a bundle from us (a first delivery can be held for a supplier check).
+  r.post('/api/checkout/recipient-check', rateLimit('recipient-check', 40, 10 * 60_000), async (ctx) => {
+    const b = z.object({ phone: zPhone }).parse(ctx.body);
+    const seen = await one(`SELECT 1 FROM orders WHERE recipient_phone = $1 AND status = 'successful' LIMIT 1`, [b.phone]);
+    return { firstTime: !seen };
+  });
+
   r.post('/api/checkout/orders', rateLimit('checkout', 20, 10 * 60_000), async (ctx) => {
     const b = checkoutSchema.parse(ctx.body);
     if (ctx.user && ctx.user.status !== 'active') throw new HttpError(403, 'Your account is restricted. Please contact support.', 'restricted');

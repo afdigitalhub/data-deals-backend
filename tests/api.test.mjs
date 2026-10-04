@@ -396,3 +396,13 @@ test('guests can track an order with order number + phone, nothing else', async 
   const bad = await c.post('/api/orders/track', { reference: 'DDNOPE123', phone: '0244445556' });
   assert.equal(bad.status, 404);
 });
+
+test('recipient check flags numbers that have never received a bundle', async () => {
+  const c = new Client();
+  const fresh = await c.post('/api/checkout/recipient-check', { phone: '0249990001' });
+  assert.equal(fresh.status, 200, JSON.stringify(fresh.data));
+  assert.equal(fresh.data.firstTime, true);
+  const [done] = await sql(`SELECT recipient_phone FROM orders WHERE status = 'successful' LIMIT 1`);
+  if (done) assert.equal((await c.post('/api/checkout/recipient-check', { phone: done.recipient_phone })).data.firstTime, false);
+  assert.equal((await c.post('/api/checkout/recipient-check', { phone: '123' })).status, 400);
+});
