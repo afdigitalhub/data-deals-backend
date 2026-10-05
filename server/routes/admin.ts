@@ -7,6 +7,7 @@ import { rateLimit } from '../http/security.js';
 import { requireStaff, revokeAllSessions } from '../auth/sessions.js';
 import { clearStoreCache, getStore } from './shop.js';
 import { config } from '../config.js';
+import { getPolicies, savePolicies, POLICY_ORDER } from '../policies.js';
 
 const MAX_IMAGES = 8;
 const ORDER_STATUSES = ['new', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'] as const;
@@ -84,8 +85,37 @@ export function registerAdminRoutes(r: Router) {
         (SELECT count(*)::int FROM products WHERE status = 'draft') AS drafts,
         (SELECT count(*)::int FROM products WHERE status = 'sold_out') AS sold_out,
         (SELECT count(*)::int FROM orders WHERE status = 'new') AS new_orders,
-        (SELECT count(*)::int FROM orders WHERE created_at > now() - interval '7 days') AS orders_week`);
+        (SELECT count(*)::int FROM orders WHERE created_at > now() - interval '7 days') AS orders_week,
+        (SELECT count(*)::int FROM orders WHERE status IN ('confirmed','preparing','out_for_delivery')) AS orders_open,
+        (SELECT count(*)::int FROM products WHERE status = 'live' AND price_minor = 0) AS no_price,
+        (SELECT count(*)::int FROM products WHERE status = 'live' AND sizes = '{}') AS no_sizes,
+        (SELECT count(*)::int FROM products p WHERE status = 'live' AND NOT EXISTS (SELECT 1 FROM product_images i WHERE i.product_id = p.id)) AS no_photo`);
     return { counts };
+  });
+
+  // Prices and sizes for many items at once.
+  r.put('/api/admin/products/bulk', requireStaff, async (ctx) => {
+    const b = z.object({ items: z.array(z.object({ id: z.number().int().positive(), price: cedisOrZero, sizes: optionList })).min(1).max(200) }).parse(ctx.body);
+    await tx(async (db) => {
+      for (const it of b.items) {
+        // An old price that is no longer higher than the new price would show a false reduction, so it is cleared.
+        await db.query(`UPDATE products SET price_minor = $2, sizes = $3, compare_at_minor = CASE WHEN compare_at_minor IS NOT NULL AND compare_at_minor <= $2 THEN NULL ELSE compare_at_minor END, updated_at = now() WHERE id = $1`, [it.id, it.price, it.sizes]);
+      }
+    });
+    return { ok: true, saved: b.items.length };
+  });
+
+  // ---------- Policies ----------
+  r.get('/api/admin/policies', requireStaff, async () => {
+    const pol = await getPolicies();
+    return { policies: POLICY_ORDER.map((k) => ({ slug: k, title: pol[k]?.title || k, body: pol[k]?.body || '' })) };
+  });
+  r.put('/api/admin/policies', requireStaff, async (ctx) => {
+    const b = z.object({ policies: z.array(z.object({ slug: z.enum(['delivery', 'returns', 'privacy', 'terms']), title: z.string().trim().min(2).max(60), body: z.string().trim().max(6000) })).min(1).max(4) }).parse(ctx.body);
+    const pol = { ...(await getPolicies()) };
+    for (const x of b.policies) pol[x.slug] = { title: x.title, body: x.body };
+    await savePolicies(pol);
+    return { ok: true };
   });
 
   // ---------- Products ----------

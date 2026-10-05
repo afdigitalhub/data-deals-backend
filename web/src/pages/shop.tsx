@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { get } from '../lib/api';
 import { Link, usePageTitle } from '../lib/router';
 import { useShop, type Collection, type Product } from '../lib/store';
 import { plural } from '../lib/format';
 import { waLink } from '../components/layout';
-import { CatIcon, IcArrow, IcSearch, IcShield, IcTruck, IcWallet, IcWhatsApp, Loading, Notice, ProductCard, errMsg } from '../components/ui';
+import { CatIcon, IcArrow, IcPin, IcSearch, IcShield, IcTruck, IcWallet, IcWhatsApp, Loading, Notice, ProductCard, errMsg } from '../components/ui';
 
 function useProducts(query: string) {
   const [data, setData] = useState<Product[] | null>(null);
@@ -160,10 +160,11 @@ export function HomePage() {
 
       <section className="trust">
         <div className="wrap trust-row">
-          <div><IcTruck /><span><b>Delivery</b>Across Ghana</span></div>
-          <div><IcWallet /><span><b>Pay after we confirm</b>Nothing charged on the site</span></div>
-          <div><IcWhatsApp width={24} height={24} /><span><b>WhatsApp support</b>Chat with us anytime</span></div>
-          <div><IcShield /><span><b>Track your order</b><Link to="/track">Check an order number</Link></span></div>
+          <Link to="/policy/delivery"><IcTruck /><span><b>Delivery across Ghana</b>Fee confirmed before you pay</span></Link>
+          <Link to="/policy/terms"><IcWallet /><span><b>Pay after we confirm</b>Nothing charged on the site</span></Link>
+          <Link to="/policy/returns"><IcShield /><span><b>Exchanges</b>Tell us within 48 hours</span></Link>
+          <Link to="/track"><IcSearch /><span><b>Track your order</b>With your order number</span></Link>
+          {s?.location ? <Link to="/delivery"><IcPin /><span><b>Visit us</b>{s.location}</span></Link> : null}
         </div>
       </section>
     </>
@@ -252,6 +253,50 @@ export function ShopPage({ category }: { category?: string }) {
   );
 }
 
+/** Policy text: lines starting "## " are headings, lines starting "- " are list items, everything else is a paragraph. */
+export function PolicyText({ body }: { body: string }) {
+  const out: React.ReactNode[] = [];
+  let list: string[] = [];
+  const flush = () => { if (list.length) { out.push(<ul key={`l${out.length}`}>{list.map((t, i) => <li key={i}>{t}</li>)}</ul>); list = []; } };
+  body.split(/\n/).map((l) => l.trim()).forEach((l, i) => {
+    if (!l) { flush(); return; }
+    if (l.startsWith('- ')) { list.push(l.slice(2)); return; }
+    flush();
+    out.push(l.startsWith('## ') ? <h2 key={i}>{l.slice(3)}</h2> : <p key={i}>{l}</p>);
+  });
+  flush();
+  return <>{out}</>;
+}
+
+export function PolicyPage({ slug }: { slug: string }) {
+  const { config } = useShop();
+  const [data, setData] = useState<{ title: string; body: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let off = false; setData(null); setError(null);
+    get<{ policy: { title: string; body: string } }>(`/api/policies/${encodeURIComponent(slug)}`).then((r) => { if (!off) setData(r.policy); }).catch((e) => { if (!off) setError(errMsg(e)); });
+    return () => { off = true; };
+  }, [slug]);
+  usePageTitle(data?.title || 'Policy');
+  const s = config?.store;
+  if (error) return <section className="band"><div className="wrap"><Notice>{error}</Notice></div></section>;
+  if (!data) return <section className="band"><div className="wrap"><Loading /></div></section>;
+  return (
+    <section className="band">
+      <div className="wrap policy">
+        <nav className="policy-nav" aria-label="Policies">
+          {(config?.policies || []).map((x) => <Link key={x.slug} to={`/policy/${x.slug}`} className={x.slug === slug ? 'on' : ''}>{x.title}</Link>)}
+        </nav>
+        <article className="prose">
+          <h1>{data.title}</h1>
+          <PolicyText body={data.body} />
+          {s && <p className="policy-ask"><a className="btn btn-line" href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question about your ${data.title.toLowerCase()} policy.`)} target="_blank" rel="noopener"><IcWhatsApp />Ask us about this</a></p>}
+        </article>
+      </div>
+    </section>
+  );
+}
+
 export function DeliveryPage() {
   const { config } = useShop();
   usePageTitle('Delivery and contact');
@@ -266,6 +311,7 @@ export function DeliveryPage() {
         <p>Add what you want to your bag, fill in your name and delivery location, and tap "Send order on WhatsApp". We reply to confirm that your size is in stock, the delivery fee and how to pay.</p>
         <h2>Sizes</h2>
         <p>Not sure about a size? Message us before you order and we'll help you choose.</p>
+        <p><Link to="/policy/delivery">Full delivery policy</Link> and <Link to="/policy/returns">returns and exchanges</Link>.</p>
         <h2>Track your order</h2>
         <p>After you send an order you get an order number. <Link to="/track">Check where your order is</Link> at any time.</p>
         {s?.about ? <><h2>About {s.name}</h2><p>{s.about}</p></> : null}
@@ -274,7 +320,7 @@ export function DeliveryPage() {
           <ul className="reach">
             {s.phones.map((p) => <li key={p}><a href={`tel:${p}`}>{p.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3')}</a></li>)}
             <li><a href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question.`)} target="_blank" rel="noopener">Chat on WhatsApp</a></li>
-            {s.location ? <li>{s.location}</li> : null}
+            {s.location ? <li><IcPin width={18} height={18} /> {s.location}</li> : null}
           </ul>
         )}
       </div>

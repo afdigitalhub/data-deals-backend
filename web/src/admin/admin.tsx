@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { del, get, post, put } from '../lib/api';
 import { Link, navigate, usePageTitle } from '../lib/router';
 import { dateTime, ghs, prettyPhone } from '../lib/format';
-import { Field, IcPlus, IcTrash, Loading, Notice, PhotoBlank, Wordmark, errMsg } from '../components/ui';
+import { Field, IcArrow, IcCheck, IcPlus, IcSearch, IcTrash, Loading, Notice, PhotoBlank, Wordmark, errMsg } from '../components/ui';
 
 interface Me { id: number; email: string; fullName: string; role: string }
 interface Img { id: number; url: string; thumb?: string }
@@ -49,16 +49,19 @@ async function shrink(file: File): Promise<{ data: string; thumb: string }> {
   } finally { URL.revokeObjectURL(url); }
 }
 
+interface Counts { live: number; drafts: number; sold_out: number; new_orders: number; orders_week: number; orders_open: number; no_price: number; no_sizes: number; no_photo: number }
 function Shell({ me, tab, children, onLogout }: { me: Me; tab: string; children: ReactNode; onLogout: () => void }) {
-  const tabs: [string, string][] = [['items', 'Items'], ['orders', 'Orders'], ['collections', 'Collections'], ['categories', 'Categories'], ['details', 'Shop details']];
+  const sum = useLoad<{ counts: Counts }>('/api/admin/summary');
+  const fresh = sum.data?.counts.new_orders || 0;
+  const tabs: [string, string][] = [['overview', 'Overview'], ['orders', 'Orders'], ['items', 'Items'], ['prices', 'Prices and sizes'], ['collections', 'Collections'], ['categories', 'Categories'], ['policies', 'Policies'], ['details', 'Shop details']];
   return (
-    <div className="adm">
+    <div className="adm site">
       <header className="adm-top">
         <Wordmark light />
         <div className="adm-who"><span>{me.fullName}</span><button className="link-btn on-dark" onClick={onLogout}>Log out</button></div>
       </header>
       <nav className="adm-tabs" aria-label="Admin sections">
-        {tabs.map(([k, label]) => <Link key={k} to={`/admin/${k}`} className={tab === k ? 'on' : ''}>{label}</Link>)}
+        {tabs.map(([k, label]) => <Link key={k} to={`/admin/${k}`} className={tab === k ? 'on' : ''}>{label}{k === 'orders' && fresh > 0 ? <i>{fresh}</i> : null}</Link>)}
         <Link to="/" className="adm-view">View shop</Link>
       </nav>
       <main className="adm-main">{children}</main>
@@ -75,8 +78,8 @@ function Login({ onDone }: { onDone: (u: Me) => void }) {
     try { onDone((await post<{ user: Me }>('/api/auth/login', { email, password })).user); } catch (err) { setError(errMsg(err)); setBusy(false); }
   };
   return (
-    <div className="gate"><form className="gate-card" onSubmit={go}>
-      <Wordmark />
+    <div className="gate site"><form className="gate-card" onSubmit={go}>
+      <Wordmark light />
       <h1>Staff log in</h1>
       <Field label="Email"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required /></Field>
       <Field label="Password"><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></Field>
@@ -92,20 +95,20 @@ export function LinkPage({ token }: { token: string }) {
   const { data, error } = useLoad<{ link: { kind: 'invite' | 'reset'; label: string | null } }>(`/api/auth/link/${encodeURIComponent(token)}`);
   const [f, setF] = useState({ full_name: '', email: '', phone: '', password: '' });
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
-  if (error) return <div className="gate"><div className="gate-card"><Wordmark /><Notice>{error}</Notice><p className="fine"><Link to="/admin">Go to staff log in</Link></p></div></div>;
-  if (!data) return <div className="gate"><Loading /></div>;
+  if (error) return <div className="gate site"><div className="gate-card"><Wordmark light /><Notice>{error}</Notice><p className="fine"><Link to="/admin">Go to staff log in</Link></p></div></div>;
+  if (!data) return <div className="gate site"><Loading /></div>;
   const invite = data.link.kind === 'invite';
   const go = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true); setErr(null);
     try {
       await post(`/api/auth/link/${encodeURIComponent(token)}`, invite ? { full_name: f.full_name, email: f.email, password: f.password, ...(f.phone ? { phone: f.phone } : {}) } : { password: f.password });
-      navigate('/admin/items', { replace: true });
+      navigate('/admin', { replace: true });
       location.reload();
     } catch (x) { setErr(errMsg(x)); setBusy(false); }
   };
   return (
-    <div className="gate"><form className="gate-card" onSubmit={go}>
-      <Wordmark />
+    <div className="gate site"><form className="gate-card" onSubmit={go}>
+      <Wordmark light />
       <h1>{invite ? 'Create your admin account' : 'Choose a new password'}</h1>
       {invite && <>
         <Field label="Your name"><input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} autoComplete="name" required /></Field>
@@ -122,32 +125,170 @@ export function LinkPage({ token }: { token: string }) {
 // ---------- Items ----------
 function Items() {
   const { data, error, reload } = useLoad<{ products: AProduct[] }>('/api/admin/products');
-  const sum = useLoad<{ counts: { live: number; drafts: number; sold_out: number; new_orders: number } }>('/api/admin/summary');
   const [busy, setBusy] = useState<number | null>(null);
-  const setStatus = async (p: AProduct, status: string) => { setBusy(p.id); try { await post(`/api/admin/products/${p.id}/status`, { status }); reload(); sum.reload(); } finally { setBusy(null); } };
+  const [term, setTerm] = useState('');
+  const [filter, setFilter] = useState<'all' | 'no_price' | 'no_sizes' | 'hidden'>('all');
+  const setStatus = async (p: AProduct, status: string) => { setBusy(p.id); try { await post(`/api/admin/products/${p.id}/status`, { status }); reload(); } finally { setBusy(null); } };
+  const all = data?.products || [];
+  const n = { all: all.length, no_price: all.filter((p) => p.priceMinor === 0).length, no_sizes: all.filter((p) => p.sizes.length === 0).length, hidden: all.filter((p) => p.status === 'draft').length };
+  const t = term.trim().toLowerCase();
+  const shown = all.filter((p) => (filter === 'no_price' ? p.priceMinor === 0 : filter === 'no_sizes' ? p.sizes.length === 0 : filter === 'hidden' ? p.status === 'draft' : true) && (!t || p.name.toLowerCase().includes(t)));
   return (
     <>
       <div className="adm-head"><h1>Items</h1><Link to="/admin/items/new" className="btn btn-dark"><IcPlus />Add an item</Link></div>
-      {sum.data && <p className="adm-sum">{sum.data.counts.live} on sale, {sum.data.counts.sold_out} sold out, {sum.data.counts.drafts} hidden. {sum.data.counts.new_orders > 0 ? <Link to="/admin/orders">{sum.data.counts.new_orders} new order{sum.data.counts.new_orders === 1 ? '' : 's'}</Link> : null}</p>}
-      {error ? <Notice>{error}</Notice> : !data ? <Loading /> : data.products.length === 0 ? (
+      {error ? <Notice>{error}</Notice> : !data ? <Loading /> : all.length === 0 ? (
         <div className="empty"><h2>Add your first item</h2><p>Take a photo, give it a name and a price, and it goes on the shop.</p><Link to="/admin/items/new" className="btn btn-dark"><IcPlus />Add an item</Link></div>
       ) : (
-        <ul className="adm-list">
-          {data.products.map((p) => (
-            <li key={p.id}>
-              <Link to={`/admin/items/${p.id}`} className="adm-thumb">{p.images[0] ? <img src={p.images[0].thumb || p.images[0].url} alt="" loading="lazy" /> : <PhotoBlank name={p.name} />}</Link>
-              <div className="adm-li-main">
-                <Link to={`/admin/items/${p.id}`} className="adm-li-name">{p.name}</Link>
-                <span className="adm-li-meta">{p.priceMinor > 0 ? ghs(p.priceMinor) : 'No price yet'}{p.categoryName ? `, ${p.categoryName}` : ''}{p.images.length === 0 ? ', no photo yet' : ''}</span>
-              </div>
-              <select value={p.status} disabled={busy === p.id} onChange={(e) => setStatus(p, e.target.value)} aria-label={`Status of ${p.name}`} className={`st st-${p.status}`}>
-                {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </li>
-          ))}
-        </ul>
+        <>
+          <label className="search"><IcSearch /><input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search items" aria-label="Search items" /></label>
+          <div className="filters">
+            {([['all', 'All'], ['no_price', 'No price'], ['no_sizes', 'No sizes'], ['hidden', 'Hidden']] as const).map(([k, label]) => <a key={k} href="#" className={filter === k ? 'on' : ''} onClick={(e) => { e.preventDefault(); setFilter(k); }}>{label} ({n[k]})</a>)}
+          </div>
+          {shown.length === 0 ? <p className="adm-sum">No items match.</p> : (
+            <ul className="adm-list">
+              {shown.map((p) => (
+                <li key={p.id}>
+                  <Link to={`/admin/items/${p.id}`} className="adm-thumb">{p.images[0] ? <img src={p.images[0].thumb || p.images[0].url} alt="" loading="lazy" /> : <PhotoBlank name={p.name} />}</Link>
+                  <div className="adm-li-main">
+                    <Link to={`/admin/items/${p.id}`} className="adm-li-name">{p.name}</Link>
+                    <span className="adm-li-meta">{p.priceMinor > 0 ? ghs(p.priceMinor) : <b className="warn">No price</b>}{p.sizes.length ? `, ${p.sizes.length} size${p.sizes.length === 1 ? '' : 's'}` : ''}{p.categoryName ? `, ${p.categoryName}` : ''}{p.images.length === 0 ? ', no photo yet' : ''}</span>
+                  </div>
+                  <select value={p.status} disabled={busy === p.id} onChange={(e) => setStatus(p, e.target.value)} aria-label={`Status of ${p.name}`} className={`st st-${p.status}`}>
+                    {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </>
+  );
+}
+
+// ---------- Overview ----------
+function Overview({ me }: { me: Me }) {
+  const sum = useLoad<{ counts: Counts }>('/api/admin/summary');
+  const orders = useLoad<{ orders: any[] }>('/api/admin/orders');
+  const c = sum.data?.counts;
+  const LABEL: Record<string, string> = { new: 'New', confirmed: 'Confirmed', preparing: 'Preparing', out_for_delivery: 'Out for delivery', delivered: 'Delivered', cancelled: 'Cancelled' };
+  const todo: [number, string, string, string][] = c ? [
+    [c.new_orders, `${c.new_orders} new order${c.new_orders === 1 ? '' : 's'} to confirm`, 'Reply to the customer, then set the order to Confirmed.', '/admin/orders'],
+    [c.no_price, `${c.no_price} item${c.no_price === 1 ? ' has' : 's have'} no price`, 'Customers see "Ask for price" until you add one.', '/admin/prices'],
+    [c.no_sizes, `${c.no_sizes} item${c.no_sizes === 1 ? ' has' : 's have'} no sizes`, 'Add sizes so customers can choose and use the size helper.', '/admin/prices'],
+    [c.no_photo, `${c.no_photo} item${c.no_photo === 1 ? ' has' : 's have'} no photo`, 'Items with photos sell far better.', '/admin/items'],
+  ] : [];
+  const open = todo.filter((t) => t[0] > 0);
+  return (
+    <>
+      <div className="adm-head"><h1>Hello, {me.fullName.split(' ')[0]}</h1><Link to="/admin/items/new" className="btn btn-dark"><IcPlus />Add an item</Link></div>
+      {sum.error ? <Notice>{sum.error}</Notice> : !c ? <Loading /> : (
+        <>
+          <div className="stats">
+            <Link to="/admin/orders" className={c.new_orders > 0 ? 'hot' : ''}><b>{c.new_orders}</b><span>New orders</span></Link>
+            <Link to="/admin/orders"><b>{c.orders_open}</b><span>Being handled</span></Link>
+            <Link to="/admin/orders"><b>{c.orders_week}</b><span>Orders in 7 days</span></Link>
+            <Link to="/admin/items"><b>{c.live}</b><span>Items on sale</span></Link>
+          </div>
+
+          <h2 className="adm-h2">To do</h2>
+          {open.length === 0 ? <div className="done-all"><IcCheck />Everything is up to date.</div> : (
+            <ul className="todo">{open.map(([, title, text, to]) => <li key={title}><Link to={to}><span><b>{title}</b>{text}</span><IcArrow width={18} height={18} /></Link></li>)}</ul>
+          )}
+
+          <h2 className="adm-h2">Latest orders</h2>
+          {!orders.data ? <Loading /> : orders.data.orders.length === 0 ? <p className="adm-sum">No orders yet. When a customer sends their bag, it shows here.</p> : (
+            <ul className="adm-list">
+              {orders.data.orders.slice(0, 5).map((o) => (
+                <li key={o.id} className="adm-coll"><div className="adm-li-main"><Link to="/admin/orders" className="adm-li-name">{o.reference}, {o.name}</Link><span className="adm-li-meta">{dateTime(o.createdAt)}, {o.items.length} item{o.items.length === 1 ? '' : 's'}{o.totalMinor > 0 ? `, ${ghs(o.totalMinor)}` : ''}</span></div><span className={`pill pill-${o.status}`}>{LABEL[o.status]}</span></li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+// ---------- Prices and sizes, many items at once ----------
+function Prices() {
+  const { data, error, reload } = useLoad<{ products: AProduct[] }>('/api/admin/products');
+  const [edit, setEdit] = useState<Record<number, { price: string; sizes: string }>>({});
+  const [only, setOnly] = useState(true);
+  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [frozen, setFrozen] = useState<number[] | null>(null);
+  const all = (data?.products || []).filter((p) => p.status !== 'draft');
+  // The list is fixed when the page opens, so a row does not jump away while you are still typing in it.
+  useEffect(() => { if (data && !frozen) setFrozen(all.filter((p) => p.priceMinor === 0 || p.sizes.length === 0).map((p) => p.id)); }, [data]); // eslint-disable-line
+  const rows = only && frozen ? all.filter((p) => frozen.includes(p.id)) : all;
+  const cur = (p: AProduct) => edit[p.id] || { price: p.priceMinor > 0 ? String(p.priceMinor / 100) : '', sizes: p.sizes.join(', ') };
+  const set = (p: AProduct, patch: Partial<{ price: string; sizes: string }>) => { setEdit((e) => ({ ...e, [p.id]: { ...cur(p), ...patch } })); setMsg(null); };
+  const changed = Object.keys(edit).length;
+  const save = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const items = Object.entries(edit).map(([id, v]) => ({ id: Number(id), price: v.price.trim() || '0', sizes: v.sizes.split(',').map((x) => x.trim()).filter(Boolean) }));
+      await put('/api/admin/products/bulk', { items });
+      setEdit({}); reload(); setMsg({ kind: 'ok', text: `Saved ${items.length} item${items.length === 1 ? '' : 's'}. The shop updates straight away.` });
+    } catch (x) { setMsg({ kind: 'error', text: errMsg(x) }); } finally { setBusy(false); }
+  };
+  return (
+    <>
+      <div className="adm-head"><h1>Prices and sizes</h1></div>
+      <p className="adm-sum">Type the price and the sizes for each item, then save them all at once. Separate sizes with commas, for example: 40, 41, 42 or S, M, L. Leave sizes empty for one-size items.</p>
+      {error ? <Notice>{error}</Notice> : !data ? <Loading /> : (
+        <>
+          <label className="check"><input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} /><span>Only show items missing a price or sizes</span></label>
+          {rows.length === 0 ? <div className="done-all"><IcCheck />Every item has a price and sizes.</div> : (
+            <ul className="quick">
+              {rows.map((p) => {
+                const v = cur(p);
+                return (
+                  <li key={p.id} className={edit[p.id] ? 'dirty' : ''}>
+                    <span className="adm-thumb">{p.images[0] ? <img src={p.images[0].thumb || p.images[0].url} alt="" loading="lazy" /> : <PhotoBlank name={p.name} />}</span>
+                    <div className="quick-main">
+                      <Link to={`/admin/items/${p.id}`} className="adm-li-name">{p.name}</Link>
+                      <div className="quick-fields">
+                        <label><span>GH₵</span><input value={v.price} onChange={(e) => set(p, { price: e.target.value })} inputMode="decimal" placeholder="Price" aria-label={`Price of ${p.name}`} /></label>
+                        <input value={v.sizes} onChange={(e) => set(p, { sizes: e.target.value })} placeholder="Sizes: 40, 41, 42" aria-label={`Sizes of ${p.name}`} />
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+          <div className="savebar"><span>{changed > 0 ? `${changed} item${changed === 1 ? '' : 's'} changed` : 'No changes yet'}</span><button className="btn btn-dark" disabled={busy || changed === 0} onClick={save}>{busy ? 'Saving' : 'Save all'}</button></div>
+        </>
+      )}
+    </>
+  );
+}
+
+// ---------- Policies ----------
+function Policies() {
+  const { data, error } = useLoad<{ policies: { slug: string; title: string; body: string }[] }>('/api/admin/policies');
+  const [f, setF] = useState<{ slug: string; title: string; body: string }[] | null>(null);
+  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  useEffect(() => { if (data) setF(data.policies); }, [data]);
+  if (error) return <Notice>{error}</Notice>;
+  if (!f) return <Loading />;
+  const save = async (e: FormEvent) => { e.preventDefault(); setBusy(true); setMsg(null); try { await put('/api/admin/policies', { policies: f }); setMsg({ kind: 'ok', text: 'Saved. Customers see the new wording within a minute.' }); } catch (x) { setMsg({ kind: 'error', text: errMsg(x) }); } finally { setBusy(false); } };
+  return (
+    <form onSubmit={save}>
+      <div className="adm-head"><h1>Policies</h1></div>
+      <p className="adm-sum">These are the promises customers read on the shop. Read each one and change anything that is not how you work. Start a line with ## for a heading and with - for a list point.</p>
+      {f.map((x, i) => (
+        <div className="editor editor-sub" key={x.slug}>
+          <div className="adm-head"><h2>{x.title}</h2><a className="link-btn" href={`/policy/${x.slug}`} target="_blank" rel="noopener">View on shop</a></div>
+          <Field label="Page title"><input value={x.title} onChange={(e) => setF(f.map((y, j) => (j === i ? { ...y, title: e.target.value } : y)))} required maxLength={60} /></Field>
+          <Field label="Text" hint="Leave it empty to hide this page from the shop."><textarea rows={14} value={x.body} onChange={(e) => setF(f.map((y, j) => (j === i ? { ...y, body: e.target.value } : y)))} maxLength={6000} /></Field>
+        </div>
+      ))}
+      {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+      <div className="savebar"><span>Changes apply to all four pages</span><button className="btn btn-dark" disabled={busy}>{busy ? 'Saving' : 'Save policies'}</button></div>
+    </form>
   );
 }
 
@@ -470,18 +611,21 @@ export function AdminApp({ path }: { path: string }) {
   usePageTitle('Admin');
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   useEffect(() => { get<{ user: Me | null }>('/api/auth/me').then((r) => setMe(r.user)).catch(() => setMe(null)); }, []);
-  if (me === undefined) return <div className="gate"><Loading /></div>;
+  if (me === undefined) return <div className="gate site"><Loading /></div>;
   if (!me) return <Login onDone={setMe} />;
   const logout = async () => { await post('/api/auth/logout'); setMe(null); };
   const seg = path.replace(/^\/admin\/?/, '').split('/');
-  const tab = seg[0] || 'items';
+  const tab = seg[0] || 'overview';
   let page: ReactNode;
   if (tab === 'items' && seg[1] === 'new') page = <ItemEditor key="new" id={null} />;
   else if (tab === 'items' && seg[1]) page = <ItemEditor key={seg[1]} id={Number(seg[1])} />;
   else if (tab === 'orders') page = <Orders />;
   else if (tab === 'collections') page = <Collections />;
+  else if (tab === 'prices') page = <Prices />;
+  else if (tab === 'policies') page = <Policies />;
+  else if (tab === 'items') page = <Items />;
   else if (tab === 'categories') page = <Categories />;
   else if (tab === 'details') page = <Details me={me} />;
-  else page = <Items />;
+  else page = <Overview me={me} />;
   return <Shell me={me} tab={tab} onLogout={logout}>{page}</Shell>;
 }

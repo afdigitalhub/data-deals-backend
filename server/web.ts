@@ -5,7 +5,8 @@ import { config } from './config.js';
 import type { Ctx } from './http/core.js';
 import { securityHeaders } from './http/security.js';
 import { one, q } from './db/pool.js';
-import { getStore } from './routes/shop.js';
+import { getStore, waNumber } from './routes/shop.js';
+import { getPolicies } from './policies.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = [join(here, '..', 'web'), join(here, '..', 'dist', 'web')].find((d) => existsSync(join(d, 'index.html'))) || join(here, '..', 'web');
@@ -35,7 +36,16 @@ async function pageMeta(path: string): Promise<Meta> {
   const name = s?.name || 'Pmsomel Enterprise';
   const base = { image: `${config.publicBaseUrl}/icons/og.png`, index: true, status: 200 };
   const general = `${name} sells sneakers, outfits, bags and accessories in Ghana. Order on WhatsApp and get it delivered.`;
-  if (path === '/') return { ...base, title: `${name} | Sneakers, outfits and accessories in Ghana`, description: general };
+  if (path === '/') {
+    const shop: Record<string, unknown> = { '@context': 'https://schema.org', '@type': 'ClothingStore', name, url: `${config.publicBaseUrl}/`, image: base.image, ...(s ? { telephone: '+' + waNumber(s.whatsapp) } : {}),
+      ...(s?.location ? { address: { '@type': 'PostalAddress', streetAddress: s.location, addressCountry: 'GH' } } : {}) };
+    return { ...base, title: `${name} | Sneakers, outfits and accessories in Ghana`, description: general, ld: [shop] };
+  }
+  const pol = /^\/policy\/([a-z]+)$/.exec(path);
+  if (pol) {
+    const x = (await getPolicies().catch(() => ({} as Record<string, { title: string; body: string }>)))[pol[1]];
+    if (x && x.body.trim()) return { ...base, title: `${x.title} | ${name}`, description: x.body.replace(/^## .*$/gm, '').replace(/\s+/g, ' ').trim().slice(0, 155), ld: [crumbs([['Home', '/'], [x.title, path]])] };
+  }
   if (path === '/shop') return { ...base, title: `Shop everything | ${name}`, description: general };
   if (path === '/delivery') return { ...base, title: `Delivery and contact | ${name}`, description: `How ordering and delivery work at ${name}, and how to reach us.` };
   const cat = /^\/shop\/([a-z0-9-]+)$/.exec(path);
@@ -115,7 +125,7 @@ export async function serveWeb(ctx: Ctx) {
     const cats = await q<{ slug: string }>('SELECT slug FROM categories WHERE is_active ORDER BY sort_order').catch(() => []);
     const items = await q<{ slug: string }>(`SELECT slug FROM products WHERE status IN ('live','sold_out') ORDER BY id DESC LIMIT 2000`).catch(() => []);
     const colls = await q<{ slug: string; kind: string }>('SELECT slug, kind FROM collections WHERE is_active ORDER BY sort_order').catch(() => []);
-    const urls = ['/', '/shop', '/delivery', ...cats.map((c) => `/shop/${c.slug}`), ...colls.map((k) => `/${k.kind}/${k.slug}`), ...items.map((p) => `/item/${p.slug}`)];
+    const urls = ['/', '/shop', '/delivery', '/policy/delivery', '/policy/returns', '/policy/privacy', '/policy/terms', ...cats.map((c) => `/shop/${c.slug}`), ...colls.map((k) => `/${k.kind}/${k.slug}`), ...items.map((p) => `/item/${p.slug}`)];
     ctx.res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
     ctx.res.end(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map((u) => `<url><loc>${config.publicBaseUrl}${u}</loc></url>`).join('')}</urlset>`);
     return;

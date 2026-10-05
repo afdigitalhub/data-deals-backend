@@ -4,6 +4,7 @@ import { getDummyHash, hashPassword, humanCode, sha256, verifyPassword } from '.
 import { formatGhs, zEmail, zName, zPassword, zPhone } from '../lib/util.js';
 import { HttpError, conflict, notFound, type Ctx, type Router } from '../http/core.js';
 import { rateLimit } from '../http/security.js';
+import { getPolicies, POLICY_ORDER } from '../policies.js';
 import { createSession, destroySession, revokeAllSessions, type SessionUser } from '../auth/sessions.js';
 
 export interface StoreSettings { name: string; tagline: string; whatsapp: string; phones: string[]; location: string; delivery_note: string; about: string; free_delivery_minor: number; gift_enabled: boolean }
@@ -78,11 +79,13 @@ export function registerShopRoutes(r: Router) {
       FROM categories c WHERE c.is_active ORDER BY c.sort_order, c.id`);
     const total = await one<{ n: number }>(`SELECT count(*)::int AS n FROM products WHERE status IN ('live','sold_out')`);
     const collections = await q(`${COLLECTION_LIST} ORDER BY k.sort_order, k.id`);
+    const pol = await getPolicies();
     ctx.json(200, {
       store: { name: s.name, tagline: s.tagline, whatsapp: s.whatsapp, whatsappIntl: waNumber(s.whatsapp), phones: s.phones, location: s.location, deliveryNote: s.delivery_note, about: s.about,
         freeDeliveryMinor: Number(s.free_delivery_minor) || 0, giftEnabled: !!s.gift_enabled },
       categories: categories.map((c: any) => ({ name: c.name, slug: c.slug, count: c.count, image: c.image_id ? `/media/${c.image_id}/t` : null })), productCount: total!.n,
       collections: collections.filter((k: any) => k.count > 0).map(collectionCard),
+      policies: POLICY_ORDER.filter((k) => pol[k]?.body?.trim()).map((k) => ({ slug: k, title: pol[k].title })),
     }, { 'Cache-Control': 'public, max-age=20' });
   });
 
@@ -105,6 +108,12 @@ export function registerShopRoutes(r: Router) {
       WHERE p.status IN ('live','sold_out') AND ($1::text IS NULL OR c.slug = $1) AND ($2 = '' OR p.name ILIKE '%' || $2 || '%') AND (NOT $3 OR p.is_featured)
       ORDER BY (p.status = 'sold_out'), ${newest ? '' : 'p.is_featured DESC, '}p.created_at DESC, p.id DESC LIMIT $4`, [cat || null, search, featured, limit]);
     return { products: rows.map(card) };
+  });
+
+  r.get('/api/policies/:slug', async (ctx) => {
+    const pol = (await getPolicies())[ctx.params.slug];
+    if (!pol || !pol.body.trim()) throw notFound('This page is not available.');
+    ctx.json(200, { policy: { slug: ctx.params.slug, title: pol.title, body: pol.body } }, { 'Cache-Control': 'public, max-age=20' });
   });
 
   // Everything the home page needs in one request.

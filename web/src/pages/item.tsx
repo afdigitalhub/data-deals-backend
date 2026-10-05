@@ -192,6 +192,7 @@ export function ItemPage({ slug }: { slug: string }) {
           <ul className="assure">
             <li>{s?.deliveryNote}</li>
             <li>Nothing is charged on the site. You pay after we confirm your order.</li>
+            <li>Wrong size? Tell us within 48 hours. <Link to="/policy/returns">Returns and exchanges</Link></li>
           </ul>
         </div>
       </section>

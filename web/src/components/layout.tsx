@@ -50,6 +50,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <Link to="/my-space">My space</Link>
               <Link to="/track">Track an order</Link>
               <Link to="/delivery">Delivery and contact</Link>
+              <Link to="/policy/returns">Returns and exchanges</Link>
             </nav>
             {s && <a className="btn btn-gold" href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question.`)} target="_blank" rel="noopener"><IcWhatsApp />Chat on WhatsApp</a>}
           </div>
@@ -72,13 +73,17 @@ export function Layout({ children }: { children: ReactNode }) {
             {cats.map((c) => <Link key={c.slug} to={`/shop/${c.slug}`}>{c.name}</Link>)}
           </div>
           <div className="foot-col">
+            <h2>Help</h2>
+            <Link to="/track">Track an order</Link>
+            <Link to="/my-space">My space</Link>
+            {(config?.policies || []).map((x) => <Link key={x.slug} to={`/policy/${x.slug}`}>{x.title}</Link>)}
+          </div>
+          <div className="foot-col">
             <h2>Reach us</h2>
             {s?.phones.map((p) => <a key={p} href={`tel:${p}`}><IcPhone width={16} height={16} />{prettyPhone(p)}</a>)}
             {s && <a href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question.`)} target="_blank" rel="noopener"><IcWhatsApp width={16} height={16} />WhatsApp</a>}
             {s?.location ? <span><IcPin width={16} height={16} />{s.location}</span> : null}
-            <Link to="/delivery">How delivery works</Link>
-            <Link to="/track">Track an order</Link>
-            <Link to="/my-space">My space</Link>
+            <Link to="/delivery">Delivery and contact</Link>
           </div>
         </div>
         <div className="foot-base"><span>© {new Date().getFullYear()} {s?.name || 'Pmsomel Enterprise'}</span><Link to="/admin">Staff</Link></div>

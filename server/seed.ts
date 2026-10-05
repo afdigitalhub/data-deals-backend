@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pool } from './db/pool.js';
 import { log } from './lib/log.js';
+import { DEFAULT_POLICIES } from './policies.js';
 
 /**
  * One-time imports of items the owner sent as photos.
@@ -82,6 +83,16 @@ export async function seedOnce(): Promise<void> {
   for (const b of BATCHES) await importBatch(b);
   await once('collections_1', seedCollections);
   await once('pairings_1', seedPairings);
+  await once('policies_1', async (db) => {
+    await db.query(`INSERT INTO settings (key, value) VALUES ('policies', $1::jsonb) ON CONFLICT (key) DO NOTHING`, [JSON.stringify(DEFAULT_POLICIES)]);
+    return Object.keys(DEFAULT_POLICIES).length;
+  });
+  // The shop's address, as given by the owner. Only fills it in if the owner has not already typed one.
+  await once('location_1', async (db) => {
+    const r = await db.query(`UPDATE settings SET value = jsonb_set(value, '{location}', to_jsonb('Fire Service Road, Elubo'::text)), updated_at = now()
+      WHERE key = 'store' AND COALESCE(value->>'location', '') = '' RETURNING key`);
+    return r.rows.length;
+  });
   await attachThumbs();
 }
 
