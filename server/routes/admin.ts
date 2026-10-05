@@ -299,6 +299,7 @@ export function registerAdminRoutes(r: Router) {
       location: z.string().trim().max(120), delivery_note: z.string().trim().max(400), about: z.string().trim().max(1500),
       free_delivery: z.union([z.number(), z.string()]).optional().transform((v) => { const n = Number(String(v ?? '').replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 && n < 1_000_000 ? Math.round(n * 100) : 0; }),
       gift_enabled: z.boolean().optional().default(false),
+      owner_name: z.string().trim().max(60).optional().default(''), owner_title: z.string().trim().max(60).optional().default(''),
     }).transform(({ free_delivery, ...rest }) => ({ ...rest, free_delivery_minor: free_delivery })).parse(ctx.body);
     await q(`INSERT INTO settings (key, value, updated_at) VALUES ('store', $1, now()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [JSON.stringify(b)]);
     clearStoreCache();

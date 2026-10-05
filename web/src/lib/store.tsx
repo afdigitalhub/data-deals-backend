@@ -3,7 +3,7 @@ import { get, safeStorage } from './api';
 
 export interface Category { name: string; slug: string; count: number; image?: string | null }
 export interface Collection { kind: 'vibe' | 'edit'; name: string; slug: string; tagline: string; body: string; count: number; image: string | null; thumb: string | null }
-export interface Store { name: string; tagline: string; whatsapp: string; whatsappIntl: string; phones: string[]; location: string; deliveryNote: string; about: string; freeDeliveryMinor: number; giftEnabled: boolean }
+export interface Store { name: string; tagline: string; whatsapp: string; whatsappIntl: string; phones: string[]; location: string; deliveryNote: string; about: string; freeDeliveryMinor: number; giftEnabled: boolean; ownerName: string; ownerTitle: string }
 export interface Config { store: Store; categories: Category[]; productCount: number; collections: Collection[]; policies: { slug: string; title: string }[] }
 export interface Product {
   id: number; slug: string; name: string; priceMinor: number; compareAtMinor: number | null; soldOut: boolean; featured: boolean;

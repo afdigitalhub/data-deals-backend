@@ -7,7 +7,7 @@ import { rateLimit } from '../http/security.js';
 import { getPolicies, POLICY_ORDER } from '../policies.js';
 import { createSession, destroySession, revokeAllSessions, type SessionUser } from '../auth/sessions.js';
 
-export interface StoreSettings { name: string; tagline: string; whatsapp: string; phones: string[]; location: string; delivery_note: string; about: string; free_delivery_minor: number; gift_enabled: boolean }
+export interface StoreSettings { name: string; tagline: string; whatsapp: string; phones: string[]; location: string; delivery_note: string; about: string; free_delivery_minor: number; gift_enabled: boolean; owner_name?: string; owner_title?: string }
 
 let storeCache: { at: number; data: StoreSettings } | null = null;
 export async function getStore(): Promise<StoreSettings> {
@@ -82,7 +82,7 @@ export function registerShopRoutes(r: Router) {
     const pol = await getPolicies();
     ctx.json(200, {
       store: { name: s.name, tagline: s.tagline, whatsapp: s.whatsapp, whatsappIntl: waNumber(s.whatsapp), phones: s.phones, location: s.location, deliveryNote: s.delivery_note, about: s.about,
-        freeDeliveryMinor: Number(s.free_delivery_minor) || 0, giftEnabled: !!s.gift_enabled },
+        freeDeliveryMinor: Number(s.free_delivery_minor) || 0, giftEnabled: !!s.gift_enabled, ownerName: s.owner_name || '', ownerTitle: s.owner_title || '' },
       categories: categories.map((c: any) => ({ name: c.name, slug: c.slug, count: c.count, image: c.image_id ? `/media/${c.image_id}/t` : null })), productCount: total!.n,
       collections: collections.filter((k: any) => k.count > 0).map(collectionCard),
       policies: POLICY_ORDER.filter((k) => pol[k]?.body?.trim()).map((k) => ({ slug: k, title: pol[k].title })),

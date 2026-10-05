@@ -43,6 +43,12 @@ export const IcBox = (p: P) => <S {...p}><path d="M3.500 7.500 12 3l8.500 4.500v
 export const IcCog = (p: P) => <S {...p}><circle cx="12" cy="12" r="3" /><path d="M12 3v2.500M12 18.500V21M3 12h2.500M18.500 12H21M5.600 5.600l1.800 1.800M16.600 16.600l1.800 1.800M5.600 18.400l1.800-1.800M16.600 7.400l1.800-1.800" /></S>;
 export const IcDoc = (p: P) => <S {...p}><path d="M6 3h8l4 4v14H6V3Z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></S>;
 export const IcLayers = (p: P) => <S {...p}><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></S>;
+/** The blue tick beside the owner's name. It is the shop's own mark for its owner, and says so to anyone who presses or hovers on it. */
+export const Tick = ({ label }: { label: string }) => (
+  <svg className="tick" viewBox="0 0 24 24" width="20" height="20" role="img" aria-label={label}><title>{label}</title>
+    <path fill="#1D9BF0" d="M12 1.500l2.600 1.900 3.200-.200 1 3.100 2.700 1.700-1 3 1 3-2.700 1.700-1 3.100-3.200-.200L12 22.500l-2.600-1.900-3.200.200-1-3.100-2.700-1.700 1-3-1-3 2.700-1.700 1-3.100 3.200.200L12 1.500z" />
+    <path fill="none" stroke="#fff" strokeWidth="2.200" strokeLinecap="round" strokeLinejoin="round" d="m7.800 12.300 2.900 2.900 5.500-6" /></svg>
+);
 export const IcWhatsApp = (p: P) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" {...p}><path d="M12 2a10 10 0 0 0-8.600 15.100L2 22l5-1.300A10 10 0 1 0 12 2Zm5.300 14.100c-.200.600-1.300 1.200-1.800 1.200-.500.100-1 .200-3.300-.700-2.800-1.100-4.500-3.900-4.700-4.100-.100-.200-1.100-1.500-1.100-2.900s.700-2 1-2.300c.200-.300.500-.300.700-.300h.500c.200 0 .400 0 .600.500l.800 2c.100.200.100.400 0 .500l-.400.600-.300.300c-.100.200-.300.300-.100.600.100.300.700 1.100 1.400 1.800 1 .900 1.800 1.100 2 1.300.300.100.400.100.600-.100l.800-1c.200-.300.400-.200.600-.100l1.900.900c.300.100.500.200.500.300.100.100.100.600-.100 1.200Z" /></svg>
 );

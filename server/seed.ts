@@ -93,6 +93,12 @@ export async function seedOnce(): Promise<void> {
       WHERE key = 'store' AND COALESCE(value->>'location', '') = '' RETURNING key`);
     return r.rows.length;
   });
+  // The owner's name and title, as given. Only fills them in if they are not already set.
+  await once('owner_1', async (db) => {
+    const r = await db.query(`UPDATE settings SET value = value || '{"owner_name":"Sir Prince","owner_title":"CEO"}'::jsonb, updated_at = now()
+      WHERE key = 'store' AND COALESCE(value->>'owner_name', '') = '' RETURNING key`);
+    return r.rows.length;
+  });
   await attachThumbs();
 }
 

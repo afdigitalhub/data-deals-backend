@@ -604,6 +604,10 @@ function Details({ me }: { me: Me }) {
         <Field label="Headline on the home page"><input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} maxLength={120} /></Field>
         <Field label="WhatsApp number for orders" hint="Customer orders open a chat with this number."><input value={f.whatsapp} onChange={(e) => setF({ ...f, whatsapp: e.target.value })} inputMode="tel" required /></Field>
         <Field label="Phone numbers shown on the site" hint="Separate numbers with a comma."><input value={f.phones} onChange={(e) => setF({ ...f, phones: e.target.value })} required /></Field>
+        <div className="two">
+          <Field label="Owner's name" hint="Shown with your photo on the shop."><input value={f.owner_name ?? ''} onChange={(e) => setF({ ...f, owner_name: e.target.value })} maxLength={60} /></Field>
+          <Field label="Title"><input value={f.owner_title ?? ''} onChange={(e) => setF({ ...f, owner_title: e.target.value })} maxLength={60} placeholder="CEO" /></Field>
+        </div>
         <Field label="Location (optional)" hint="Town or shop address, shown at the bottom of the site."><input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} maxLength={120} /></Field>
         <Field label="Delivery note"><textarea rows={3} value={f.delivery_note} onChange={(e) => setF({ ...f, delivery_note: e.target.value })} maxLength={400} /></Field>
         <Field label="Free delivery from (GH₵, optional)" hint="Leave empty if you don't offer free delivery. If you set an amount, the bag tells customers how far they are from it."><input value={f.free_delivery ?? ''} onChange={(e) => setF({ ...f, free_delivery: e.target.value })} inputMode="decimal" placeholder="For example: 500" /></Field>

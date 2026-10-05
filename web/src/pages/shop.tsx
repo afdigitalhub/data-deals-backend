@@ -4,7 +4,7 @@ import { Link, usePageTitle } from '../lib/router';
 import { useShop, type Collection, type Product } from '../lib/store';
 import { plural } from '../lib/format';
 import { waLink } from '../components/layout';
-import { CatIcon, IcArrow, IcPin, IcSearch, IcShield, IcTruck, IcWallet, IcWhatsApp, Loading, Notice, ProductCard, errMsg } from '../components/ui';
+import { CatIcon, IcArrow, IcPin, Tick, IcSearch, IcShield, IcTruck, IcWallet, IcWhatsApp, Loading, Notice, ProductCard, errMsg } from '../components/ui';
 
 function useProducts(query: string) {
   const [data, setData] = useState<Product[] | null>(null);
@@ -28,6 +28,29 @@ export function EmptyShelf({ title, body }: { title: string; body: string }) {
       <p>{body}</p>
       {s && <a className="btn btn-dark" href={waLink(s.whatsappIntl, `Hello ${s.name}, what do you have in stock today?`)} target="_blank" rel="noopener"><IcWhatsApp />Ask what's in stock</a>}
     </div>
+  );
+}
+
+/** The person behind the shop: photo, name with the owner's tick, title and where to find him. */
+export function OwnerCard() {
+  const { config } = useShop();
+  const s = config?.store;
+  if (!s || !s.ownerName) return null;
+  return (
+    <section className="band">
+      <div className="wrap">
+        <div className="owner">
+          <img src="/icons/owner.webp" alt={s.ownerName} width="720" height="720" loading="lazy" decoding="async" />
+          <div className="owner-copy">
+            <span className="owner-label">The person behind the shop</span>
+            <h2>{s.ownerName}<Tick label={`Owner of ${s.name}`} /></h2>
+            <p className="owner-title">{s.ownerTitle ? `${s.ownerTitle}, ` : ''}{s.name}</p>
+            {s.location ? <p className="owner-where"><IcPin width={18} height={18} />{s.location}</p> : null}
+            <a className="btn btn-line" href={waLink(s.whatsappIntl, `Hello ${s.ownerName}, I have a question about ${s.name}.`)} target="_blank" rel="noopener"><IcWhatsApp />Message on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -151,6 +174,8 @@ export function HomePage() {
       </section>
 
       <ContinueExploring />
+
+      <OwnerCard />
 
       <section className="trust">
         <div className="wrap trust-row">
@@ -310,6 +335,7 @@ export function DeliveryPage() {
         <p>After you send an order you get an order number. <Link to="/track">Check where your order is</Link> at any time.</p>
         {s?.about ? <><h2>About {s.name}</h2><p>{s.about}</p></> : null}
         <h2>Reach us</h2>
+        {s?.ownerName ? <p className="owner-line"><img src="/icons/owner.webp" alt="" width="56" height="56" /><span><b>{s.ownerName}<Tick label={`Owner of ${s.name}`} /></b>{s.ownerTitle ? `${s.ownerTitle}, ` : ''}{s.name}</span></p> : null}
         {s && (
           <ul className="reach">
             {s.phones.map((p) => <li key={p}><a href={`tel:${p}`}>{p.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3')}</a></li>)}
