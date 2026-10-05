@@ -121,7 +121,9 @@ export function registerShopRoutes(r: Router) {
     const drops = await q(`${PRODUCT_LIST} WHERE p.status = 'live' ORDER BY p.created_at DESC, p.id DESC LIMIT 10`);
     const edit = await one(`${COLLECTION_LIST} AND k.kind = 'edit' ORDER BY k.sort_order, k.id LIMIT 1`);
     const editProducts = edit && edit.count > 0 ? await collectionProducts(edit.id, 5) : [];
-    ctx.json(200, { newDrops: drops.map(card), edit: edit && edit.count > 0 ? { ...collectionCard(edit), products: editProducts.map(card) } : null }, { 'Cache-Control': 'public, max-age=20' });
+    // A mixed set for the moving strip and the changing hero photo. The order is reshuffled once a day.
+    const runway = await q(`${PRODUCT_LIST} WHERE p.status = 'live' AND EXISTS (SELECT 1 FROM product_images i WHERE i.product_id = p.id) ORDER BY md5(p.id::text || current_date::text) LIMIT 20`);
+    ctx.json(200, { runway: runway.map(card), newDrops: drops.map(card), edit: edit && edit.count > 0 ? { ...collectionCard(edit), products: editProducts.map(card) } : null }, { 'Cache-Control': 'public, max-age=20' });
   });
 
   r.get('/api/collections/:slug', async (ctx) => {

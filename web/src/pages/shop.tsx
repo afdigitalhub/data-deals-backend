@@ -77,7 +77,7 @@ export function ContinueExploring({ exclude }: { exclude?: number }) {
   );
 }
 
-interface HomeData { newDrops: Product[]; edit: (Collection & { products: Product[] }) | null }
+interface HomeData { runway: Product[]; newDrops: Product[]; edit: (Collection & { products: Product[] }) | null }
 
 export function HomePage() {
   const { config } = useShop();
@@ -89,13 +89,23 @@ export function HomePage() {
   const cats = config?.categories || [];
   const vibes = (config?.collections || []).filter((k) => k.kind === 'vibe');
   const [pick, setPick] = useState(0);
-  const withPhoto = (data?.newDrops || []).filter((p) => p.image).slice(0, 3);
-  const lead = withPhoto[Math.min(pick, withPhoto.length - 1)] || null;
+  const [held, setHeld] = useState(false);
+  const withPhoto = (data?.runway || []).filter((p) => p.image).slice(0, 5);
+  const lead = withPhoto[pick % Math.max(1, withPhoto.length)] || null;
+  // The hero photo changes by itself every few seconds. It stops once the visitor picks one, and for people who turn motion off.
+  useEffect(() => {
+    if (held || withPhoto.length < 2) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => setPick((n) => (n + 1) % withPhoto.length), 4200);
+    return () => clearInterval(t);
+  }, [held, withPhoto.length]);
+  const strip = (data?.runway || []).slice(5);
+  const rowA = strip.filter((_, i) => i % 2 === 0), rowB = strip.filter((_, i) => i % 2 === 1);
   const edit = data?.edit || null;
   return (
     <>
       <section className={`hero ${lead ? 'has-photo' : ''}`}>
-        {lead && <img className="hero-bg" src={lead.image!} alt="" key={lead.id} />}
+        {withPhoto.map((p, i) => <img key={p.id} className={`hero-bg ${p.id === lead?.id ? 'on' : ''}`} src={p.image!} alt="" loading={i ? 'lazy' : undefined} decoding="async" />)}
         <div className="hero-in">
           <div className="hero-copy">
             <h1>Dress well, wherever you are in Ghana.</h1>
@@ -107,12 +117,30 @@ export function HomePage() {
           </div>
           {withPhoto.length > 1 && (
             <div className="hero-picks">
-              {withPhoto.map((p, i) => <button key={p.id} className={p.id === lead?.id ? 'on' : ''} onClick={() => setPick(i)} aria-label={`Show ${p.name}`}><img src={p.thumb || p.image!} alt="" /></button>)}
+              {withPhoto.map((p, i) => <button key={p.id} className={p.id === lead?.id ? 'on' : ''} onClick={() => { setPick(i); setHeld(true); }} aria-label={`Show ${p.name}`}><img src={p.thumb || p.image!} alt="" /></button>)}
             </div>
           )}
         </div>
         {lead && <Link to={`/item/${lead.slug}`} className="hero-link">{lead.name}<IcArrow width={16} height={16} /></Link>}
       </section>
+
+      {rowA.length >= 4 && (
+        <section className="runway" aria-label="In the shop now">
+          <div className="wrap"><div className="band-head"><h2>In the shop now</h2><Link to="/shop" className="more">See everything</Link></div></div>
+          {[rowA, rowB].map((row, r) => row.length >= 4 && (
+            <div className={`run ${r ? 'run-back' : ''}`} key={r}>
+              <div className="run-track" style={{ animationDuration: `${row.length * 5.5}s` }}>
+                {[0, 1].map((copy) => row.map((p) => (
+                  <Link key={`${copy}-${p.id}`} to={`/item/${p.slug}`} className="run-card" aria-hidden={copy ? true : undefined} tabIndex={copy ? -1 : undefined}>
+                    <img src={p.thumb || p.image!} alt={copy ? '' : p.name} loading="lazy" decoding="async" />
+                    <span>{p.name}</span>
+                  </Link>
+                )))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {vibes.length > 0 && (
         <section className="band">
