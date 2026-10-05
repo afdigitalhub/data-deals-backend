@@ -75,18 +75,12 @@ export function HomePage() {
         {lead && <img className="hero-bg" src={lead.image!} alt="" key={lead.id} />}
         <div className="hero-in">
           <div className="hero-copy">
-            <div className="kicker">Sneakers<i />Outfits<i />Accessories</div>
-            <h1>Step into<em>style</em></h1>
-            <p>Premium sneakers, outfits and accessories for every occasion.</p>
+            <h1>Dress well, wherever you are in Ghana.</h1>
+            <p>Sneakers, outfits and shoes from our shop in Elubo. Choose what you like, order on WhatsApp, and pay when we confirm.</p>
             <div className="hero-cta">
-              <Link to="/shop" className="btn btn-gold">Shop now<IcArrow width={18} height={18} /></Link>
+              <Link to="/shop" className="btn btn-gold">See the shop<IcArrow width={18} height={18} /></Link>
               {s && <a className="btn btn-ghost" href={waLink(s.whatsappIntl, `Hello ${s.name}, I have a question.`)} target="_blank" rel="noopener"><IcWhatsApp />Chat with us</a>}
             </div>
-            <ul className="hero-facts">
-              <li><b>Nationwide</b>Delivery across Ghana</li>
-              <li><b>Easy</b>Order on WhatsApp</li>
-              <li><b>Safe</b>Pay after we confirm</li>
-            </ul>
           </div>
           {withPhoto.length > 1 && (
             <div className="hero-picks">
@@ -100,7 +94,7 @@ export function HomePage() {
       {vibes.length > 0 && (
         <section className="band">
           <div className="wrap">
-            <div className="band-head"><h2>Shop by vibe</h2><span className="band-note">Pick a mood, see the pieces</span></div>
+            <div className="band-head"><h2>Shop by vibe</h2><span className="band-note">Four moods, one shop</span></div>
             <div className="vibes">
               {vibes.map((k) => (
                 <Link key={k.slug} to={`/vibe/${k.slug}`} className="vibe">
