@@ -770,3 +770,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .channel-copy span { font-size: .86rem; color: #C9E7D6; line-height: 1.35; }
 .channel-go { flex-shrink: 0; padding: 9px 16px; border-radius: 999px; background: #25D366; color: #06210F; font-weight: 800; font-size: .9rem; }
 @media (max-width: 380px) { .channel-go { display: none; } }
+
+/* WhatsApp channel bar: the first thing on every page */
+.channel-bar { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 9px 14px; background: #101114; color: #fff; text-decoration: none; font-size: .9rem; line-height: 1.25; }
+.channel-bar-ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; }
+.channel-bar-text { min-width: 0; }
+.channel-bar-text b { font-weight: 800; }
+.channel-bar-text span { color: #C9CBD1; }
+.channel-bar-go { flex-shrink: 0; padding: 6px 14px; border-radius: 999px; background: #25D366; color: #06210F; font-weight: 800; font-size: .84rem; }
+.channel-bar:hover .channel-bar-go { background: #3EE07E; }
+@media (max-width: 420px) { .channel-bar { justify-content: space-between; font-size: .84rem; } .channel-bar-text span { display: block; font-size: .78rem; } }

@@ -27,6 +27,11 @@ export function Header({ onYellow = false }: { onYellow?: boolean }) {
       {config?.maintenance.enabled && <div className="banner">{config.maintenance.message}</div>}
       {config?.notice?.enabled && !config.maintenance.enabled && <div className="banner notice" role="status">{config.notice.message}</div>}
       {config?.payments.enabled && config.payments.testMode && <div className="banner test">Test mode — payments on this site are not real yet.</div>}
+      <a className="channel-bar" href={CHANNEL_URL} target="_blank" rel="noopener">
+        <span className="channel-bar-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.600 15.100L2 22l5-1.300A10 10 0 1 0 12 2Zm5.300 14.100c-.200.600-1.300 1.200-1.800 1.200-.500.100-1 .200-3.300-.700-2.800-1.100-4.500-3.900-4.700-4.100-.100-.200-1.100-1.500-1.100-2.900s.700-2 1-2.300c.200-.300.500-.300.700-.300h.500c.200 0 .400 0 .600.500l.800 2c.100.200.100.400 0 .500l-.400.600-.300.300c-.100.200-.300.300-.100.600.100.300.700 1.100 1.400 1.800 1 .900 1.800 1.100 2 1.300.300.100.400.100.600-.100l.800-1c.200-.300.400-.200.600-.100l1.900.900c.300.100.500.200.500.300.100.100.100.600-.100 1.200Z" /></svg></span>
+        <span className="channel-bar-text"><b>Follow us on WhatsApp</b><span> for delivery updates and offers</span></span>
+        <span className="channel-bar-go">Follow</span>
+      </a>
       <header className={`site-header ${onYellow && !open ? 'on-yellow' : ''}`}>
         <div className="container inner">
           <Logo />
