@@ -760,3 +760,74 @@ h1, h2, h3 { font-family: var(--wide); font-weight: 700; letter-spacing: -.03em;
 .adm-li-name { font-weight: 600; letter-spacing: -.012em; }
 .todo b { font-weight: 600; }
 .editor h2, .site .editor-sub h2 { font-size: 1.2rem; }
+
+/* ---------- Navigation ---------- */
+.wm-row { flex-direction: row; align-items: center; gap: 11px; }
+.wm-mark { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(150deg, #E7C97F, #C39A45); color: var(--on-gold); flex-shrink: 0; }
+.wm-mark .wm-crown { color: var(--on-gold) !important; width: 13px; height: 7px; margin: 0 0 1px; }
+.wm-mark .wm-name { font-size: .98rem; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--on-gold); }
+.wm-text { display: flex; flex-direction: column; line-height: 1.1; }
+.wm-text b { font-weight: 700; font-size: 1.22rem; letter-spacing: -.035em; color: #fff; }
+.wm-text i { font-style: normal; font-weight: 500; font-size: .74rem; letter-spacing: -.005em; color: var(--faint); margin-top: 1px; }
+
+.top-in { display: flex; align-items: center; gap: 12px; height: 70px; padding: 0 var(--pad); }
+.top .wordmark { margin-right: auto; }
+.top-tools { display: flex; align-items: center; gap: 8px; }
+.hbtn.ring { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--edge-2); }
+.hbtn.ring:hover { border-color: var(--gold); }
+.hbtn.ring .bag-count { top: -3px; right: -3px; }
+.bag-btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 6px; background: var(--gold); color: var(--on-gold); font-weight: 600; font-size: .96rem; letter-spacing: -.012em; text-decoration: none; }
+.bag-btn:hover { background: var(--gold-soft); }
+.bag-btn b { min-width: 21px; height: 21px; padding: 0 6px; border-radius: 11px; background: var(--on-gold); color: var(--gold); font-size: .74rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+@media (min-width: 960px) {
+  .top-in { height: 78px; gap: 34px; }
+  .top .wordmark { margin-right: 0; }
+  .top-nav { display: flex; gap: 4px; margin-right: auto; }
+  .top-nav a { padding: 9px 13px; border-radius: 6px; border-bottom: 0; color: var(--dim); }
+  .top-nav a:hover { color: #fff; background: var(--panel); }
+  .top-nav a.on { color: #fff; background: var(--panel-2); border-bottom: 0; }
+}
+
+/* Bottom bar on phones: the five places people go, within reach of the thumb */
+.tabbar { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: rgba(13,11,10,.97); border-top: 1px solid var(--edge); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.tabbar a, .tabbar button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 52px; padding: 4px 2px; border: 0; border-radius: 10px; background: none; color: var(--faint); font: inherit; font-size: .7rem; font-weight: 600; letter-spacing: -.005em; text-decoration: none; cursor: pointer; }
+.tabbar svg { width: 23px; height: 23px; }
+.tabbar .on { color: var(--gold); background: rgba(214,174,96,.1); }
+.tab-ic { position: relative; display: inline-flex; }
+.tab-ic i, .tabbar > a > i { position: absolute; top: -5px; right: -10px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--gold); color: var(--on-gold); font-style: normal; font-size: .66rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.site { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+.wa-fab { bottom: calc(80px + env(safe-area-inset-bottom)); width: 50px; height: 50px; }
+.toast { bottom: calc(82px + env(safe-area-inset-bottom)); }
+@media (min-width: 960px) {
+  .site > .tabbar:not(.adm-bar) { display: none; }
+  .site:not(.adm) { padding-bottom: 0; }
+  .wa-fab { bottom: 22px; } .toast { bottom: 24px; }
+}
+
+/* Admin navigation: bottom bar on phones, side menu on computers */
+.site .adm-top { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; background: rgba(11,9,8,.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 10px 16px; }
+.site .adm-view { margin: 0; padding: 9px 14px; border: 1px solid var(--edge-2); border-radius: 6px; color: var(--cream) !important; font-weight: 600; font-size: .88rem; text-decoration: none; }
+.adm-side { display: none; }
+.adm .savebar { bottom: calc(64px + env(safe-area-inset-bottom)); }
+.site .adm-main { padding-bottom: 150px; }
+.adm-more { display: grid; gap: 4px; }
+.adm-more-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 1.05rem; }
+.adm-more a, .adm-more > button { display: flex; align-items: center; gap: 14px; min-height: 54px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--panel-2); color: var(--cream); font: inherit; font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer; text-align: left; }
+.adm-more a.on { color: var(--gold); }
+.adm-more svg { color: var(--gold); }
+.site .adm-more .btn { margin: 0; }
+@media (min-width: 960px) {
+  .adm.site { padding: 0 0 0 264px; }
+  .adm .adm-top, .adm .adm-bar { display: none; }
+  .adm-side { display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; width: 264px; padding: 22px 16px; background: #0E0C0B; border-right: 1px solid var(--edge); overflow-y: auto; }
+  .adm-side nav { display: grid; gap: 3px; margin-top: 28px; }
+  .adm-side nav a { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 12px; border-radius: 8px; color: var(--dim); font-weight: 500; font-size: .96rem; letter-spacing: -.012em; text-decoration: none; }
+  .adm-side nav a:hover { background: var(--panel); color: #fff; }
+  .adm-side nav a.on { background: rgba(214,174,96,.12); color: var(--gold); font-weight: 600; }
+  .adm-side nav a span { margin-right: auto; }
+  .adm-side nav a i { font-style: normal; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--gold); color: var(--on-gold); font-size: .74rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .adm-side-foot { margin-top: auto; padding-top: 20px; display: grid; gap: 14px; }
+  .adm-side-foot .adm-who { justify-content: space-between; color: var(--faint); font-size: .88rem; }
+  .site .adm-main { max-width: 940px; padding: 36px 32px 110px; }
+  .adm .savebar { left: 264px; bottom: 0; }
+}

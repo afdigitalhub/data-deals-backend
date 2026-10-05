@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from '../lib/router';
 import { useShop } from '../lib/store';
 import { prettyPhone } from '../lib/format';
-import { IcBag, IcClose, IcHeart, IcMenu, IcPhone, IcPin, IcSearch, IcTruck, IcUser, IcWhatsApp, Wordmark } from './ui';
+import { IcBag, IcClose, IcGrid, IcHeart, IcHome, IcMenu, IcPhone, IcPin, IcSearch, IcTruck, IcUser, IcWhatsApp, Wordmark } from './ui';
 import { QuickAdd, Toast } from './quickadd';
 
 export function waLink(intl: string, text: string) { return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`; }
@@ -21,8 +21,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="strap"><IcTruck width={17} height={17} /><span>Delivery across Ghana. Order on WhatsApp, pay after we confirm.</span></div>
       <header className="top">
         <div className="top-in">
-          <button className="hbtn menu-btn" onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open}><IcMenu /></button>
-          <Wordmark light />
+          <Wordmark light row />
           <nav className="top-nav" aria-label="Shop sections">
             <Link to="/" className={path === '/' ? 'on' : ''}>Home</Link>
             <Link to="/shop" className={path.startsWith('/shop') ? 'on' : ''}>Shop</Link>
@@ -30,10 +29,10 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link to="/track" className={path === '/track' ? 'on' : ''}>Track order</Link>
           </nav>
           <div className="top-tools">
-            <Link to="/shop" className="hbtn hide-sm" aria-label="Search the shop"><IcSearch /></Link>
-            <Link to="/my-space" className="hbtn hide-sm" aria-label="My space"><IcUser /></Link>
-            <Link to="/my-space/saved" className="hbtn" aria-label={`Saved items, ${saved.length}`}><IcHeart />{saved.length > 0 && <span className="bag-count">{saved.length}</span>}</Link>
-            <Link to="/bag" className="hbtn" aria-label={`Bag, ${bagCount} item${bagCount === 1 ? '' : 's'}`}><IcBag />{bagCount > 0 && <span className="bag-count">{bagCount}</span>}</Link>
+            <Link to="/shop" className="hbtn ring" aria-label="Search the shop"><IcSearch /></Link>
+            <Link to="/my-space" className="hbtn ring hide-sm" aria-label="My space"><IcUser /></Link>
+            <Link to="/my-space/saved" className="hbtn ring hide-sm" aria-label={`Saved items, ${saved.length}`}><IcHeart />{saved.length > 0 && <span className="bag-count">{saved.length}</span>}</Link>
+            <Link to="/bag" className="bag-btn" aria-label={`Bag, ${bagCount} item${bagCount === 1 ? '' : 's'}`}><IcBag width={19} height={19} />Bag{bagCount > 0 ? <b>{bagCount}</b> : null}</Link>
           </div>
         </div>
       </header>
@@ -42,7 +41,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="drawer" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="drawer-scrim" onClick={() => setOpen(false)} />
           <div className="drawer-panel">
-            <div className="drawer-head"><Wordmark light /><button className="hbtn" onClick={() => setOpen(false)} aria-label="Close menu"><IcClose /></button></div>
+            <div className="drawer-head"><Wordmark light row /><button className="hbtn" onClick={() => setOpen(false)} aria-label="Close menu"><IcClose /></button></div>
             <nav className="drawer-nav">
               <Link to="/shop">Everything</Link>
               {cats.map((c) => <Link key={c.slug} to={`/shop/${c.slug}`}>{c.name}<span>{c.count}</span></Link>)}
@@ -58,6 +57,13 @@ export function Layout({ children }: { children: ReactNode }) {
       )}
 
       <main id="main" key={path}>{children}</main>
+      <nav className="tabbar" aria-label="Main">
+        <Link to="/" className={path === '/' ? 'on' : ''}><IcHome />Home</Link>
+        <Link to="/shop" className={path.startsWith('/shop') || path.startsWith('/item') || path.startsWith('/vibe') || path.startsWith('/edit') ? 'on' : ''}><IcGrid />Shop</Link>
+        <Link to="/my-space/saved" className={path === '/my-space/saved' ? 'on' : ''}><span className="tab-ic"><IcHeart />{saved.length > 0 && <i>{saved.length}</i>}</span>Saved</Link>
+        <Link to="/bag" className={path === '/bag' || path === '/order-sent' ? 'on' : ''}><span className="tab-ic"><IcBag />{bagCount > 0 && <i>{bagCount}</i>}</span>Bag</Link>
+        <button type="button" className={open ? 'on' : ''} onClick={() => setOpen(true)} aria-expanded={open}><IcMenu />Menu</button>
+      </nav>
       <QuickAdd />
       <Toast />
 

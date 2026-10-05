@@ -39,15 +39,26 @@ export const IcUser = (p: P) => <S {...p}><circle cx="12" cy="8.500" r="3.700" /
 export const IcCheck = (p: P) => <S {...p}><path d="m5 12.500 4.500 4.500L19 7.500" /></S>;
 export const IcRuler = (p: P) => <S {...p}><path d="M3.500 15.500 15.500 3.500l5 5-12 12-5-5Z" /><path d="m7.500 11.500 2 2M10.500 8.500l2 2M13.500 5.500l2 2" /></S>;
 export const IcGift = (p: P) => <S {...p}><path d="M4 11h16v9H4zM3 7.500h18V11H3zM12 7.500V20M12 7.500c-1.500-3.500-5.500-3.500-5.500-1.200 0 1.200 2 1.200 5.500 1.200Zm0 0c1.500-3.500 5.500-3.500 5.500-1.200 0 1.200-2 1.200-5.500 1.200Z" /></S>;
+export const IcBox = (p: P) => <S {...p}><path d="M3.500 7.500 12 3l8.500 4.500v9L12 21l-8.500-4.500v-9Z" /><path d="M3.500 7.500 12 12l8.500-4.500M12 12v9" /></S>;
+export const IcCog = (p: P) => <S {...p}><circle cx="12" cy="12" r="3" /><path d="M12 3v2.500M12 18.500V21M3 12h2.500M18.500 12H21M5.600 5.600l1.800 1.800M16.600 16.600l1.800 1.800M5.600 18.400l1.800-1.800M16.600 7.400l1.800-1.800" /></S>;
+export const IcDoc = (p: P) => <S {...p}><path d="M6 3h8l4 4v14H6V3Z" /><path d="M14 3v4h4M9 12h6M9 16h6" /></S>;
+export const IcLayers = (p: P) => <S {...p}><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></S>;
 export const IcWhatsApp = (p: P) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" {...p}><path d="M12 2a10 10 0 0 0-8.600 15.100L2 22l5-1.300A10 10 0 1 0 12 2Zm5.300 14.100c-.200.600-1.300 1.200-1.800 1.200-.500.100-1 .200-3.300-.700-2.800-1.100-4.500-3.900-4.700-4.100-.100-.200-1.100-1.500-1.100-2.900s.700-2 1-2.300c.200-.300.500-.300.700-.300h.500c.200 0 .400 0 .600.500l.800 2c.100.200.100.400 0 .500l-.400.600-.300.300c-.100.200-.300.300-.100.600.100.300.700 1.100 1.400 1.800 1 .900 1.800 1.100 2 1.300.300.100.400.100.600-.100l.800-1c.200-.300.400-.200.600-.100l1.900.900c.300.100.500.200.500.300.100.100.100.600-.100 1.200Z" /></svg>
 );
 
-export function Wordmark({ light = false }: { light?: boolean }) {
+/** The PM mark. "row" is the header form: mark on the left, name beside it. Without it, the stacked form for footers and sign-in. */
+export function Wordmark({ light = false, row = false, to = '/' }: { light?: boolean; row?: boolean; to?: string }) {
+  const crown = <svg className="wm-crown" viewBox="0 0 24 12" width="20" height="10" aria-hidden="true"><path d="M2 11h20L23 3l-5.500 4L12 1 6.500 7 1 3l1 8Z" fill="currentColor" /></svg>;
+  if (row) return (
+    <Link to={to} className={`wordmark wm-row ${light ? 'on-dark' : ''}`} aria-label="Pmsomel Enterprise home">
+      <span className="wm-mark">{crown}<span className="wm-name">PM</span></span>
+      <span className="wm-text"><b>Pmsomel</b><i>Enterprise</i></span>
+    </Link>
+  );
   return (
-    <Link to="/" className={`wordmark ${light ? 'on-dark' : ''}`} aria-label="Pmsomel Enterprise home">
-      <svg className="wm-crown" viewBox="0 0 24 12" width="20" height="10" aria-hidden="true"><path d="M2 11h20L23 3l-5.500 4L12 1 6.500 7 1 3l1 8Z" fill="currentColor" /></svg>
-      <span className="wm-name">PM</span><span className="wm-sub">Pmsomel Enterprise</span>
+    <Link to={to} className={`wordmark ${light ? 'on-dark' : ''}`} aria-label="Pmsomel Enterprise home">
+      {crown}<span className="wm-name">PM</span><span className="wm-sub">Pmsomel Enterprise</span>
     </Link>
   );
 }

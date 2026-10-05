@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { del, get, post, put } from '../lib/api';
 import { Link, navigate, usePageTitle } from '../lib/router';
 import { dateTime, ghs, prettyPhone } from '../lib/format';
-import { Field, IcArrow, IcCheck, IcPlus, IcSearch, IcTrash, Loading, Notice, PhotoBlank, Wordmark, errMsg } from '../components/ui';
+import { Field, IcArrow, IcBag, IcBox, IcCheck, IcClose, IcCog, IcDoc, IcGrid, IcHome, IcLayers, IcMenu, IcPlus, IcSearch, IcTag, IcTrash, Loading, Notice, PhotoBlank, Wordmark, errMsg } from '../components/ui';
 
 interface Me { id: number; email: string; fullName: string; role: string }
 interface Img { id: number; url: string; thumb?: string }
@@ -53,18 +53,44 @@ interface Counts { live: number; drafts: number; sold_out: number; new_orders: n
 function Shell({ me, tab, children, onLogout }: { me: Me; tab: string; children: ReactNode; onLogout: () => void }) {
   const sum = useLoad<{ counts: Counts }>('/api/admin/summary');
   const fresh = sum.data?.counts.new_orders || 0;
-  const tabs: [string, string][] = [['overview', 'Overview'], ['orders', 'Orders'], ['items', 'Items'], ['prices', 'Prices and sizes'], ['collections', 'Collections'], ['categories', 'Categories'], ['policies', 'Policies'], ['details', 'Shop details']];
+  const [more, setMore] = useState(false);
+  useEffect(() => { setMore(false); }, [tab]);
+  const main: [string, string, ReactNode][] = [['overview', 'Overview', <IcHome />], ['orders', 'Orders', <IcBag />], ['items', 'Items', <IcGrid />], ['prices', 'Prices', <IcTag />]];
+  const rest: [string, string, ReactNode][] = [['collections', 'Collections', <IcLayers />], ['categories', 'Categories', <IcBox />], ['policies', 'Policies', <IcDoc />], ['details', 'Shop details', <IcCog />]];
+  const badge = (k: string) => (k === 'orders' && fresh > 0 ? <i>{fresh}</i> : null);
+  const inRest = rest.some(([k]) => k === tab);
   return (
     <div className="adm site">
+      <aside className="adm-side" aria-label="Admin sections">
+        <Wordmark light row to="/admin" />
+        <nav>
+          {[...main, ...rest].map(([k, label, icon]) => <Link key={k} to={`/admin/${k}`} className={tab === k ? 'on' : ''}>{icon}<span>{k === 'prices' ? 'Prices and sizes' : label}</span>{badge(k)}</Link>)}
+        </nav>
+        <div className="adm-side-foot">
+          <Link to="/" className="btn btn-line">View shop</Link>
+          <div className="adm-who"><span>{me.fullName}</span><button className="link-btn" onClick={onLogout}>Log out</button></div>
+        </div>
+      </aside>
       <header className="adm-top">
-        <Wordmark light />
-        <div className="adm-who"><span>{me.fullName}</span><button className="link-btn on-dark" onClick={onLogout}>Log out</button></div>
-      </header>
-      <nav className="adm-tabs" aria-label="Admin sections">
-        {tabs.map(([k, label]) => <Link key={k} to={`/admin/${k}`} className={tab === k ? 'on' : ''}>{label}{k === 'orders' && fresh > 0 ? <i>{fresh}</i> : null}</Link>)}
+        <Wordmark light row to="/admin" />
         <Link to="/" className="adm-view">View shop</Link>
-      </nav>
+      </header>
       <main className="adm-main">{children}</main>
+      <nav className="tabbar adm-bar" aria-label="Admin sections">
+        {main.map(([k, label, icon]) => <Link key={k} to={`/admin/${k}`} className={tab === k ? 'on' : ''}><span className="tab-ic">{icon}{badge(k)}</span>{label}</Link>)}
+        <button type="button" className={more || inRest ? 'on' : ''} onClick={() => setMore(true)} aria-expanded={more}><IcMenu />More</button>
+      </nav>
+      {more && (
+        <div className="sheet" role="dialog" aria-modal="true" aria-label="More admin sections">
+          <div className="sheet-scrim" onClick={() => setMore(false)} />
+          <div className="sheet-panel adm-more">
+            <div className="adm-more-head"><b>{me.fullName}</b><button className="hbtn" onClick={() => setMore(false)} aria-label="Close"><IcClose /></button></div>
+            {rest.map(([k, label, icon]) => <Link key={k} to={`/admin/${k}`} className={tab === k ? 'on' : ''}>{icon}{label}</Link>)}
+            <Link to="/"><IcArrow />View shop</Link>
+            <button type="button" onClick={onLogout}><IcClose />Log out</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
