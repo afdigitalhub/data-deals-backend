@@ -85,6 +85,7 @@ export function Footer() {
               <ul className="small" style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 6 }}>
                 {b?.supportPhone && <li>Call: <a href={`tel:${b.supportPhone.replace(/\s/g, '')}`}>{b.supportPhone}</a></li>}
                 {b?.whatsappNumber && <li>WhatsApp: <a href={`https://wa.me/${b.whatsappNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener">Chat with us</a></li>}
+                <li>Updates: <a href={CHANNEL_URL} target="_blank" rel="noopener">Follow our WhatsApp channel</a></li>
                 {b?.supportEmail && <li>Email: <a href={`mailto:${b.supportEmail}`}>{b.supportEmail}</a></li>}
               </ul>
             )}
@@ -138,6 +139,19 @@ export function SiteLayout({ children, onYellow = false }: { children: ReactNode
       <ChatWidget />
       <BottomNav />
     </div>
+  );
+}
+
+export const CHANNEL_URL = 'https://whatsapp.com/channel/0029VbDVHC4C1FuI9XqnD715';
+
+/** Invites a buyer to follow the Data Deals WhatsApp channel, where delivery delays and network notices are posted. */
+export function ChannelCard({ waiting = false }: { waiting?: boolean }) {
+  return (
+    <a className="channel-card" href={CHANNEL_URL} target="_blank" rel="noopener">
+      <span className="channel-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.600 15.100L2 22l5-1.300A10 10 0 1 0 12 2Zm5.300 14.100c-.200.600-1.300 1.200-1.800 1.200-.500.100-1 .200-3.300-.700-2.800-1.100-4.500-3.900-4.700-4.100-.100-.200-1.100-1.500-1.100-2.900s.700-2 1-2.300c.200-.300.500-.300.700-.300h.500c.200 0 .400 0 .600.500l.800 2c.100.200.100.400 0 .500l-.400.600-.300.300c-.100.200-.300.300-.100.600.100.300.700 1.100 1.400 1.800 1 .900 1.800 1.100 2 1.300.300.100.400.100.600-.100l.800-1c.200-.300.400-.200.600-.100l1.900.900c.300.100.500.200.500.300.100.100.100.600-.100 1.200Z" /></svg></span>
+      <span className="channel-copy"><b>Follow Data Deals on WhatsApp</b><span>{waiting ? 'If a network is slow, we post it there first. Follow so you always know.' : 'Network delays, new bundles and offers are posted there first.'}</span></span>
+      <span className="channel-go">Follow</span>
+    </a>
   );
 }
 

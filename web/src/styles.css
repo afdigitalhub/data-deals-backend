@@ -761,3 +761,12 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .input.phone-ok { border-color: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 16%, transparent); }
 .input.phone-bad { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }
 .input.phone-warn { border-color: var(--warn); }
+
+/* WhatsApp channel invite */
+.channel-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 20px; background: #0F2A1C; color: #fff; text-decoration: none; border: 1.5px solid #1F6B45; }
+.channel-ic { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; }
+.channel-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-right: auto; }
+.channel-copy b { font-size: 1rem; line-height: 1.25; }
+.channel-copy span { font-size: .86rem; color: #C9E7D6; line-height: 1.35; }
+.channel-go { flex-shrink: 0; padding: 9px 16px; border-radius: 999px; background: #25D366; color: #06210F; font-weight: 800; font-size: .9rem; }
+@media (max-width: 380px) { .channel-go { display: none; } }

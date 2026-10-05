@@ -3,7 +3,7 @@ import { ApiError, get, post, safeStorage } from '../lib/api';
 import { rememberOrder, useApp } from '../lib/app-state';
 import { validityText, NETWORK_META, dataSize, dateTime, ghs, normalizePhone, randomKey } from '../lib/format';
 import { Link, navigate, useLocation, usePageTitle } from '../lib/router';
-import { SiteLayout } from '../components/layout';
+import { SiteLayout, ChannelCard } from '../components/layout';
 import { NotifyCard } from '../components/NotifyCard';
 import { Alert, Empty, Field, Input, Loading, NetworkBadge, Spinner, StatusPill, errMsg, fieldErr } from '../components/ui';
 import { IcAlert, IcBack, IcCard, IcCheck, IcClock, IcLock, IcPhone, IcRefund } from '../components/icons';
@@ -218,6 +218,7 @@ export function OrderPage({ reference }: { reference: string }) {
         {error && <div style={{ marginTop: 12 }}><Alert kind="warn">{error}</Alert></div>}
         {['paid', 'queued', 'processing', 'needs_review'].includes(s) && <div style={{ marginTop: 16 }}><NotifyCard variant="order" orderReference={order.reference} orderToken={token || undefined} /></div>}
         {s === 'successful' && <div style={{ marginTop: 16 }}><NotifyCard variant="dashboard" /></div>}
+        {s !== 'pending_payment' && <div style={{ marginTop: 16 }}><ChannelCard waiting={['paid', 'queued', 'processing', 'needs_review'].includes(s)} /></div>}
 
         <div className="card receipt" style={{ marginTop: 16 }} id="receipt">
           <div className="row between" style={{ marginBottom: 12 }}><h2 style={{ fontSize: '1.15rem', margin: 0 }}>Receipt</h2><button className="btn btn-light btn-sm" onClick={() => window.print()}>Print / save</button></div>
