@@ -265,7 +265,7 @@ function statusView(s: string, justPaid: boolean) {
     case 'expired': return { ...bad, title: 'Order expired', body: 'This order was not paid in time. Please start a new purchase.' };
     case 'paid': return { ...wait, title: 'Payment received', body: 'We have confirmed your payment and are preparing delivery.' };
     case 'queued': return { ...wait, title: 'Payment received — in the delivery queue', body: 'Your order is paid and waiting to be delivered by our team. You can close this page; your receipt link stays valid.' };
-    case 'processing': return { ...wait, title: 'Delivering now', body: 'We have sent your top-up for delivery and are waiting for confirmation.' };
+    case 'processing': return { ...wait, title: 'Sent. Please check your phone', body: 'Your top-up has been sent. It can arrive before this page updates, so check your balance. This page changes to Delivered once the network confirms, which can take a while.' };
     case 'needs_review': return { ...wait, title: 'We are checking this order', body: 'Your payment is safe. We are confirming the delivery with our supplier before doing anything else, so you are never charged twice.' };
     case 'failed': return { ...bad, title: "We couldn't deliver this order", body: 'Your payment is safe. Our team will retry the delivery or refund you. You can also request a refund below.' };
     case 'refund_pending': return { ...wait, title: 'Refund in progress', body: 'We have started your refund with Paystack. It can take a few working days to reach you.' };
