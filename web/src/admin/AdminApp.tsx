@@ -84,7 +84,7 @@ export default function AdminApp() {
     <div className="admin">
       <header className="admin-top">
         <button className="icon-btn admin-menu-btn" aria-label="Menu" onClick={() => setOpen(!open)}><IcMenu /></button>
-        <Link to="/admin" className="logo"><Bolt style={{ color: '#FFD400', width: 24, height: 28 }} /><span>Data <span className="deals">Deals</span></span></Link>
+        <Link to="/admin" className="logo"><Bolt style={{ color: '#FFD400', width: 24, height: 28 }} /><span>Data <span className="deals">Glow</span></span></Link>
         <div className="admin-user">
           <div className="desktop-only" style={{ flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.2 }}><b>{user.fullName}</b><span style={{ color: '#9FA2A8', textTransform: 'capitalize' }}>{user.role}</span></div>
           <div className="avatar">{user.fullName.split(' ').map((s) => s[0]).slice(0, 2).join('').toUpperCase()}</div>
