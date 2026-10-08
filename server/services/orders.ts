@@ -9,6 +9,7 @@ import { adapterFor, isAdapterReady, type DeliveryRequest, type DeliveryResult }
 import { enqueue, registerJob } from './jobs.js';
 import { alertAdmins, notify } from './notify.js';
 import { scheduleDailyPush } from './push.js';
+import { scheduleOwnerReport } from './report.js';
 import { getSetting } from './settings.js';
 import { audit } from './audit.js';
 
@@ -399,6 +400,8 @@ export async function periodicTasks() {
   await reconcileRefunds();
   // 5) Daily phone notification run (once per day after the configured hour).
   await scheduleDailyPush().catch((e) => log.warn('daily push schedule failed', { err: e }));
+  // 6) Owners' daily report on their phones (yesterday's orders and sales), once each morning.
+  await scheduleOwnerReport().catch((e) => log.warn('owner report schedule failed', { err: e }));
 }
 
 export async function reconcileRefunds() {

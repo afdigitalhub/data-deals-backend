@@ -768,3 +768,22 @@ table.table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .install-banner ~ .wa-fab { bottom: calc(222px + env(safe-area-inset-bottom)); }
 @media (max-width: 640px) { .wa-fab { right: 18px; bottom: calc(150px + env(safe-area-inset-bottom)); } }
 @media (min-width: 980px) { .wa-fab { right: 30px; bottom: 90px; } .install-banner ~ .wa-fab { bottom: 178px; } }
+
+/* Admin daily report card */
+.dr-card { background: #101114; color: #fff; border-radius: 18px; padding: 16px 16px 14px; margin-bottom: 16px; }
+.dr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.dr-head b { font-size: 17px; letter-spacing: -.3px; }
+.dr-head span { font-size: 12px; color: #A9A9B0; }
+.dr-days { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dr-day { background: #1E1F25; border-radius: 14px; padding: 12px; min-width: 0; }
+.dr-label { font-size: 12px; color: #A9A9B0; font-weight: 600; }
+.dr-big { font-size: 22px; font-weight: 800; color: #FFD400; letter-spacing: -.6px; margin-top: 4px; }
+.dr-line { font-size: 12.5px; color: #DADAE0; margin-top: 2px; line-height: 1.35; }
+.dr-empty { font-size: 14px; color: #DADAE0; margin-top: 6px; font-weight: 600; }
+.dr-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.dr-flag { font-size: 11.5px; font-weight: 700; border-radius: 20px; padding: 3px 9px; background: #2A2B31; color: #fff; text-decoration: none; }
+.dr-flag.wait { background: #3A3410; color: #FFD400; }
+.dr-flag.warn { background: #3A2410; color: #FF9F43; }
+.dr-flag.bad { background: #3A1014; color: #FF6B6B; }
+.dr-btn { margin-top: 12px; width: 100%; }
+.dr-note { font-size: 12.5px; color: #C9C6BC; margin-top: 10px; line-height: 1.4; }

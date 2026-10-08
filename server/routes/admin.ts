@@ -8,6 +8,7 @@ import { can, requirePerm, requireStaff, revokeAllSessions } from '../auth/sessi
 import { adapterFor } from '../suppliers/adapters.js';
 import { audit } from '../services/audit.js';
 import { emailConfigured } from '../services/notify.js';
+import { dailyReport, isoDay } from '../services/report.js';
 import {
   STATUS_LABEL, adminEscalate, adminMarkFailed, adminReconcile, adminRecordDelivery, adminRefund, adminRetry, type OrderStatus,
 } from '../services/orders.js';
@@ -58,6 +59,11 @@ function adminOrderRow(o: any, ctx: Ctx) {
 
 export function registerAdminRoutes(r: Router) {
   // ---------- Overview & analytics ----------
+  r.get('/api/admin/daily-report', requirePerm('analytics.view'), async () => {
+    const now = new Date();
+    const [today, yesterday] = await Promise.all([dailyReport(isoDay(now)), dailyReport(isoDay(new Date(now.getTime() - 86_400_000)))]);
+    return { today, yesterday };
+  });
   r.get('/api/admin/overview', requirePerm('analytics.view'), async (ctx) => {
     const { from, to } = dateRange(ctx.query, 30);
     const includeTest = ctx.query.get('test') === '1';

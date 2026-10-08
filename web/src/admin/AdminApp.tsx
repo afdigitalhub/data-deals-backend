@@ -11,6 +11,7 @@ import { LiveChatPage, TeamChatPage } from './chat';
 import { ProductsPage, SuppliersPage } from './catalog';
 import { CustomersPage, CustomerDetailPage, TicketsPage, TicketDetailPage, TeamPage, AgentsPage } from './people';
 import { PaymentsPage, SettingsPage, AuditPage } from './system';
+import { DailyReportCard } from './report';
 
 const NAV: { to: string; label: string; icon: ReactNode; perm: string; group?: string }[] = [
   { to: '/admin', label: 'Dashboard', icon: <IcHome />, perm: 'orders.view' },
@@ -137,6 +138,7 @@ function Dashboard({ reports = false }: { reports?: boolean }) {
               {data.queue.escalated > 0 && <Link to="/admin/orders?queue=escalated" className="btn btn-light btn-sm">{data.queue.escalated} escalated</Link>}
             </div>
           )}
+          {!reports && <DailyReportCard />}
           <div className="kpis" style={{ opacity: loading ? 0.6 : 1 }}>
             <Kpi label="Total orders" value={t.orders.toLocaleString()} sub={`${t.awaiting_payment} awaiting payment`} icon={<IcCart />} tint="#E8F0FE" />
             <Kpi label="Gross sales" value={ghs(t.gross_sales)} sub={`Refunded ${ghs(data.refunds.refunded)}`} icon={<IcChart />} tint="#E6F5EC" />
